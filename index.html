@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M365 Message Centre Review</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ms-blue: #0078d4;
+    --ms-blue-light: #e6f2fb;
+    --ms-green: #107c10;
+    --ms-green-light: #e8f5e9;
+    --ms-orange: #ff8c00;
+    --ms-grey: #605e5c;
+    --ms-grey-light: #f3f2f1;
+    --ms-text: #11100f;
+    --ms-text-muted: #605e5c;
+    --ms-border: #edebe9;
+    --card-bg: #ffffff;
+    --page-bg: #f3f2f1;
+  }
+
+  body {
+    font-family: 'Segoe UI', SegoeUI, Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--page-bg);
+    color: var(--ms-text);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--ms-blue);
+    color: white;
+    padding: 20px 24px 16px;
+  }
+  .header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .header-sub {
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  .btn-refresh {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .btn-refresh:hover { background: rgba(255,255,255,0.25); }
+  .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── CONTROLS ── */
+  .controls {
+    background: white;
+    border-bottom: 1px solid var(--ms-border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .controls-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 12px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .search-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .search-wrap {
+    position: relative;
+    flex: 1;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--ms-text-muted);
+  }
+  #searchInput {
+    width: 100%;
+    padding: 8px 12px 8px 34px;
+    border: 1px solid #c8c6c4;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #searchInput:focus { border-color: var(--ms-blue); }
+
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-label {
+    font-size: 12px;
+    color: var(--ms-text-muted);
+    font-weight: 500;
+    margin-right: 2px;
+  }
+  .pill {
+    padding: 4px 12px;
+    border-radius: 16px;
+    border: 1px solid #c8c6c4;
+    font-size: 12px;
+    cursor: pointer;
+    background: white;
+    color: var(--ms-text);
+    font-family: inherit;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pill:hover { border-color: var(--ms-blue); color: var(--ms-blue); }
+  .pill.active { background: var(--ms-blue); border-color: var(--ms-blue); color: white; }
+  .pill.active:hover { background: #106ebe; }
+
+  .range-select {
+    padding: 4px 10px;
+    border: 1px solid #c8c6c4;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    background: white;
+    cursor: pointer;
+    outline: none;
+    color: var(--ms-text);
+  }
+  .range-select:focus { border-color: var(--ms-blue); }
+
+  /* ── MAIN ── */
+  .main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+  }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--ms-text-muted);
+  }
+  .status-bar strong { color: var(--ms-text); }
+
+  /* ── SECTION ── */
+  .product-section { margin-bottom: 28px; }
+  .product-heading {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ms-text);
+    border-left: 4px solid var(--ms-blue);
+    padding-left: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-count {
+    background: var(--ms-blue-light);
+    color: var(--ms-blue);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    transition: box-shadow 0.15s;
+  }
+  .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,120,212,0.15); }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ms-blue);
+    text-decoration: none;
+    line-height: 1.4;
+    flex: 1;
+  }
+  .card-title:hover { text-decoration: underline; }
+
+  .badges { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-action { background: var(--ms-orange); color: white; }
+  .badge-updated { background: var(--ms-grey); color: white; }
+  .badge-major { background: #c50f1f; color: white; }
+  .badge-launched { background: var(--ms-green); color: white; }
+  .badge-preview { background: var(--ms-blue-light); color: var(--ms-blue); border: 1px solid #b3d6f5; }
+  .badge-rolling { background: #fff4ce; color: #7a4f00; border: 1px solid #f5d978; }
+  .badge-dev { background: #f3f0ff; color: #5c2d91; border: 1px solid #d2c4f0; }
+  .badge-cancelled { background: #fde7e9; color: #c50f1f; border: 1px solid #f4abab; }
+
+  .card-meta {
+    font-size: 12px;
+    color: var(--ms-text-muted);
+    margin-bottom: 8px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .meta-id {
+    font-weight: 600;
+    color: var(--ms-text);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+  }
+  .meta-date { display: flex; align-items: center; gap: 4px; }
+
+  .card-summary {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--ms-text);
+    margin-bottom: 10px;
+  }
+
+  .date-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .date-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .date-pill.preview { background: var(--ms-blue-light); color: var(--ms-blue); }
+  .date-pill.ga { background: var(--ms-green-light); color: var(--ms-green); }
+  .date-pill.start { background: #fff4ce; color: #7a4f00; }
+
+  .card-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--ms-grey-light);
+    color: var(--ms-text-muted);
+    border: 1px solid var(--ms-border);
+  }
+
+  .card-links {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .card-link {
+    color: var(--ms-blue);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .card-link:hover { text-decoration: underline; }
+
+  /* ── EMPTY / LOADING / ERROR ── */
+  .state-msg {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--ms-text-muted);
+  }
+  .state-msg svg { margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto; }
+  .state-msg h3 { font-size: 16px; color: var(--ms-text); margin-bottom: 6px; }
+  .state-msg p { font-size: 13px; }
+
+  .error-msg {
+    background: #fde7e9;
+    border: 1px solid #f4abab;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #c50f1f;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--ms-text-muted);
+    padding: 20px;
+    border-top: 1px solid var(--ms-border);
+    margin-top: 20px;
+  }
+
+  /* ── HIGHLIGHT ── */
+  mark {
+    background: #fff4ce;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+
+  @media (max-width: 600px) {
+    .header-inner { flex-direction: column; }
+    .controls-inner, .main { padding-left: 12px; padding-right: 12px; }
+    .search-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>📋 M365 Message Centre</h1>
+      <div class="header-sub" id="headerSub">Loading announcements…</div>
+    </div>
+    <button class="btn-refresh" id="btnRefresh" onclick="loadData(true)">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="controls-inner">
+    <div class="search-row">
+      <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zm-5.242 1.56a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Search by title, summary or MC number…" oninput="renderAll()" autocomplete="off">
+      </div>
+      <select class="range-select" id="rangeSelect" onchange="renderAll()">
+        <option value="7">Last 7 days</option>
+        <option value="14">Last 14 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="0">All time</option>
+      </select>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Product:</span>
+      <button class="pill active" data-product="All" onclick="setProduct('All')">All</button>
+      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot</button>
+      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio</button>
+      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform</button>
+      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps</button>
+      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate</button>
+      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales</button>
+      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="errorBanner" class="error-msg" style="display:none"></div>
+  <div class="status-bar" id="statusBar" style="display:none">
+    <span id="statusText"></span>
+    <span id="lastFetched" style="font-size:11px"></span>
+  </div>
+  <div id="content">
+    <div class="state-msg">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <h3>Loading…</h3>
+      <p>Fetching announcements from mc.merill.net</p>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Data sourced from <a href="https://mc.merill.net" target="_blank" style="color:var(--ms-blue)">mc.merill.net</a> — Microsoft 365 Message Centre archive
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────
+const DATA_URL = 'https://mc.merill.net/messages-index.json';
+
+// Maps our product labels → keywords to match against Services array (case-insensitive)
+const PRODUCT_RULES = {
+  'Copilot': (s) => {
+    const lower = s.toLowerCase();
+    return (lower.includes('copilot') && !lower.includes('copilot studio')) ||
+           lower.includes('microsoft 365 copilot');
+  },
+  'Copilot Studio': (s) => s.toLowerCase().includes('copilot studio'),
+  'Power Platform': (s) => s.toLowerCase().includes('power platform'),
+  'Power Apps': (s) => s.toLowerCase().includes('power apps') || s.toLowerCase().includes('powerapps'),
+  'Power Automate': (s) => s.toLowerCase().includes('power automate'),
+  'Dynamics 365 Sales': (s) => {
+    const lower = s.toLowerCase();
+    return lower.includes('dynamics 365 sales') || lower.includes('dynamics sales') ||
+           lower.includes('copilot for sales');
+  },
+  'Business Central': (s) => s.toLowerCase().includes('business central'),
+};
+
+const PRODUCT_ICONS = {
+  'Copilot': '🤖',
+  'Copilot Studio': '🧩',
+  'Power Platform': '⚡',
+  'Power Apps': '📱',
+  'Power Automate': '🔄',
+  'Dynamics 365 Sales': '💼',
+  'Business Central': '📊',
+};
+
+// ── STATE ───────────────────────────────────────────────────────────────
+let allItems = [];
+let activeProduct = 'All';
+let lastFetchTime = null;
+
+// ── FETCH ────────────────────────────────────────────────────────────────
+async function loadData(forceRefresh = false) {
+  const btn = document.getElementById('btnRefresh');
+  const icon = document.getElementById('refreshIcon');
+  btn.disabled = true;
+  icon.classList.add('spin');
+  icon.textContent = '↻';
+
+  hideError();
+  setContent(`
+    <div class="state-msg">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <h3>Fetching announcements…</h3>
+      <p>Loading from mc.merill.net</p>
+    </div>`);
+
+  try {
+    const res = await fetch(DATA_URL + (forceRefresh ? '?t=' + Date.now() : ''), {
+      cache: forceRefresh ? 'reload' : 'default'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    const data = await res.json();
+    allItems = Array.isArray(data) ? data : (data.items || data.messages || []);
+    lastFetchTime = new Date();
+    renderAll();
+  } catch (err) {
+    showError(`Failed to load data: ${err.message}. <a href="${DATA_URL}" target="_blank" style="color:#c50f1f">Try opening the data source directly</a>.`);
+    setContent('');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    icon.classList.remove('spin');
+  }
+}
+
+// ── FILTER & RENDER ──────────────────────────────────────────────────────
+function renderAll() {
+  const query = document.getElementById('searchInput').value.toLowerCase().trim();
+  const days = parseInt(document.getElementById('rangeSelect').value);
+  const cutoff = days > 0 ? new Date(Date.now() - days * 86400000) : null;
+
+  // Filter to MC items only (Id starts with MC)
+  let items = allItems.filter(item => item.Id && item.Id.startsWith('MC'));
+
+  // Date range filter
+  if (cutoff) {
+    items = items.filter(item => {
+      const d = new Date(item.LastModifiedDateTime || item.StartDateTime);
+      return d >= cutoff;
+    });
+  }
+
+  // Assign products to each item
+  items = items.map(item => ({
+    ...item,
+    _products: getProducts(item),
+  }));
+
+  // Keep only items matching target products
+  items = items.filter(item => item._products.length > 0);
+
+  // Product filter
+  if (activeProduct !== 'All') {
+    items = items.filter(item => item._products.includes(activeProduct));
+  }
+
+  // Search filter
+  if (query) {
+    items = items.filter(item =>
+      (item.Title || '').toLowerCase().includes(query) ||
+      (item.Summary || '').toLowerCase().includes(query) ||
+      (item.Id || '').toLowerCase().includes(query) ||
+      (item.Services || []).some(s => s.toLowerCase().includes(query))
+    );
+  }
+
+  // Sort by date desc
+  items.sort((a, b) =>
+    new Date(b.LastModifiedDateTime || b.StartDateTime) -
+    new Date(a.LastModifiedDateTime || a.StartDateTime)
+  );
+
+  updateStatusBar(items.length);
+
+  if (items.length === 0) {
+    const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+    setContent(`
+      <div class="state-msg">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
+        <h3>No announcements found</h3>
+        <p>No matching updates for the selected filters in the ${rangeLabel}.</p>
+        ${activeProduct !== 'All' || query ? '<p style="margin-top:6px">Try clearing filters or widening the date range.</p>' : ''}
+      </div>`);
+    return;
+  }
+
+  // Group by product (when "All" is selected)
+  if (activeProduct === 'All') {
+    const sections = Object.keys(PRODUCT_RULES).map(product => {
+      const productItems = items.filter(i => i._products.includes(product));
+      return { product, items: productItems };
+    }).filter(s => s.items.length > 0);
+
+    // For items shown in multiple sections, each section shows the item
+    const html = sections.map(s => renderSection(s.product, s.items, query)).join('');
+    setContent(html);
+  } else {
+    const html = renderSection(activeProduct, items, query);
+    setContent(html);
+  }
+
+  updateHeaderSub();
+}
+
+function getProducts(item) {
+  const services = item.Services || [];
+  const title = item.Title || '';
+  const summary = item.Summary || '';
+  const combined = [...services, title, summary];
+
+  return Object.entries(PRODUCT_RULES)
+    .filter(([, matcher]) => combined.some(s => matcher(s)))
+    .map(([product]) => product);
+}
+
+function renderSection(product, items, query) {
+  const icon = PRODUCT_ICONS[product] || '📌';
+  const cards = items.map(item => renderCard(item, query)).join('');
+  return `
+    <div class="product-section" data-product="${esc(product)}">
+      <div class="product-heading">
+        ${icon} ${esc(product)}
+        <span class="section-count">${items.length}</span>
+      </div>
+      ${cards}
+    </div>`;
+}
+
+function renderCard(item, query) {
+  const id = item.Id || '';
+  const title = highlight(item.Title || 'Untitled', query);
+  const url = item.Url || `https://mc.merill.net/message/${id}`;
+  const summary = highlight(item.Summary || '', query);
+  const tags = item.Tags || [];
+  const services = item.Services || [];
+  const modDate = item.LastModifiedDateTime || item.StartDateTime;
+  const startDate = item.StartDateTime;
+  const isUpdated = (item.Title || '').startsWith('(Updated)');
+  const isMajor = item.IsMajorChange;
+
+  // Status badge
+  const statusTag = tags.find(t => ['Launched','In development','Rolling out','Preview','Cancelled'].includes(t));
+  let statusBadge = '';
+  if (statusTag === 'Launched') statusBadge = `<span class="badge badge-launched">✓ Launched</span>`;
+  else if (statusTag === 'Rolling out') statusBadge = `<span class="badge badge-rolling">↗ Rolling out</span>`;
+  else if (statusTag === 'In development') statusBadge = `<span class="badge badge-dev">⚙ In development</span>`;
+  else if (statusTag === 'Preview') statusBadge = `<span class="badge badge-preview">◎ Preview</span>`;
+  else if (statusTag === 'Cancelled') statusBadge = `<span class="badge badge-cancelled">✕ Cancelled</span>`;
+
+  // Preview / GA date pills
+  const datePills = buildDatePills(tags, startDate);
+
+  // Extra tags (deployment scope etc)
+  const scopeTags = tags.filter(t =>
+    !['Launched','In development','Rolling out','Preview','Cancelled','General Availability','Preview'].includes(t) &&
+    !t.startsWith('20')
+  ).slice(0, 4);
+
+  const metaDate = modDate ? `Updated ${formatDate(modDate)}` : '';
+  const productBadge = item._products.map(p =>
+    `<span class="tag">${esc(p)}</span>`
+  ).join('');
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <a class="card-title" href="${esc(url)}" target="_blank">${title}</a>
+        <div class="badges">
+          ${isMajor ? '<span class="badge badge-major">⚠ Major</span>' : ''}
+          ${isUpdated ? '<span class="badge badge-updated">↻ Updated</span>' : ''}
+          ${statusBadge}
+        </div>
+      </div>
+      <div class="card-meta">
+        <span class="meta-id">${esc(id)}</span>
+        ${metaDate ? `<span class="meta-date">📅 ${esc(metaDate)}</span>` : ''}
+        ${services.slice(0,3).map(s => `<span style="color:var(--ms-text-muted)">${esc(s)}</span>`).join('<span style="color:#c8c6c4">·</span>')}
+      </div>
+      ${summary ? `<div class="card-summary">${summary}</div>` : ''}
+      ${datePills ? `<div class="date-pills">${datePills}</div>` : ''}
+      ${scopeTags.length ? `<div class="card-tags">${scopeTags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+      <div class="card-links">
+        <a class="card-link" href="${esc(url)}" target="_blank">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v2H3v10h10V9h2v6H1V1zm9 0h5v5h-2V4.414l-6.293 6.293-1.414-1.414L11.586 3H10V1z"/></svg>
+          View on mc.merill.net
+        </a>
+        <a class="card-link" href="https://admin.microsoft.com/AdminPortal/home#/MessageCenter/:/messages/${esc(id)}" target="_blank">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v2H3v10h10V9h2v6H1V1zm9 0h5v5h-2V4.414l-6.293 6.293-1.414-1.414L11.586 3H10V1z"/></svg>
+          Admin Center
+        </a>
+      </div>
+    </div>`;
+}
+
+function buildDatePills(tags, startDate) {
+  let pills = '';
+  const hasGA = tags.includes('General Availability');
+  const hasPreview = tags.includes('Preview');
+
+  if (startDate) {
+    const d = formatDate(startDate);
+    if (hasPreview && !hasGA) {
+      pills += `<span class="date-pill preview">◎ Preview: ${d}</span>`;
+    } else if (hasGA) {
+      pills += `<span class="date-pill ga">✓ GA: ${d}</span>`;
+    } else if (tags.includes('Rolling out')) {
+      pills += `<span class="date-pill start">↗ Rolling out from: ${d}</span>`;
+    } else if (tags.includes('Launched')) {
+      pills += `<span class="date-pill ga">✓ Launched: ${d}</span>`;
+    } else if (tags.includes('In development')) {
+      pills += `<span class="date-pill start">⚙ Expected: ${d}</span>`;
+    }
+  }
+  return pills;
+}
+
+// ── UI HELPERS ───────────────────────────────────────────────────────────
+function setProduct(p) {
+  activeProduct = p;
+  document.querySelectorAll('.pill[data-product]').forEach(el => {
+    el.classList.toggle('active', el.dataset.product === p);
+  });
+  renderAll();
+}
+
+function setContent(html) {
+  document.getElementById('content').innerHTML = html;
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.innerHTML = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('errorBanner').style.display = 'none';
+}
+
+function updateStatusBar(count) {
+  const bar = document.getElementById('statusBar');
+  bar.style.display = 'flex';
+  const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+  document.getElementById('statusText').innerHTML =
+    `Showing <strong>${count}</strong> announcement${count !== 1 ? 's' : ''}` +
+    (activeProduct !== 'All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    ` · ${rangeLabel}`;
+  if (lastFetchTime) {
+    document.getElementById('lastFetched').textContent =
+      'Fetched ' + lastFetchTime.toLocaleTimeString();
+  }
+}
+
+function updateHeaderSub() {
+  const mcItems = allItems.filter(i => i.Id && i.Id.startsWith('MC'));
+  const days = parseInt(document.getElementById('rangeSelect').value);
+  const cutoff = days > 0 ? new Date(Date.now() - days * 86400000) : null;
+  const relevant = mcItems.filter(i => {
+    if (cutoff) {
+      const d = new Date(i.LastModifiedDateTime || i.StartDateTime);
+      if (d < cutoff) return false;
+    }
+    return getProducts(i).length > 0;
+  });
+  const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+  document.getElementById('headerSub').textContent =
+    `${relevant.length} relevant updates · ${rangeLabel} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return iso.split('T')[0]; }
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function highlight(text, query) {
+  if (!query || query.length < 2) return esc(text);
+  const escaped = esc(text);
+  const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+  return escaped.replace(re, '<mark>$1</mark>');
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
