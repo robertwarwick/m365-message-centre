@@ -78,3 +78,7 @@ This is a public JSON index maintained by [mc.merill.net](https://mc.merill.net)
 All data comes from **[mc.merill.net](https://mc.merill.net)** — an independent archive of Microsoft 365 Message Centre and Roadmap posts, designed for easy search, linking, and AI consumption.
 
 > Message Centre posts are tenant-specific. Always verify applicability against your own tenant's Message Centre in the [Microsoft 365 Admin Center](https://admin.microsoft.com).
+
+---
+
+*Last updated: 9 June 2026*
