@@ -350,11 +350,30 @@ function renderAll() {
   const today   = new Date(); today.setHours(0,0,0,0);
   const horizon = new Date(today.getTime() + days*86400000);
 
-  let items = allItems
-    .filter(i => i.Id && i.Id.startsWith('RM'))
+  const rmAll = allItems.filter(i => i.Id && i.Id.startsWith('RM'));
+
+  // Diagnostic logging – helps trace why items may not appear
+  if (rmAll.length > 0) {
+    const allTags   = [...new Set(rmAll.flatMap(i => i.Tags||[]))].sort();
+    const gaTagged  = rmAll.filter(i => (i.Tags||[]).some(t => t.toLowerCase().includes('general availability')));
+    const fwdGA     = gaTagged.filter(i => i.StartDateTime && new Date(i.StartDateTime) >= today);
+    console.group('Timeline diagnostics');
+    console.log('Total RM items:', rmAll.length);
+    console.log('All unique tags:', allTags);
+    console.log('Items with General Availability tag:', gaTagged.length);
+    console.log('GA items with future StartDateTime:', fwdGA.length);
+    if (gaTagged.length) {
+      const dates = gaTagged.map(i => i.StartDateTime).filter(Boolean).sort();
+      console.log('GA item date range:', dates[0], '→', dates[dates.length-1]);
+      console.log('Sample GA item:', gaTagged[0]);
+    }
+    console.groupEnd();
+  }
+
+  let items = rmAll
     .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags||[]) }))
-    // Only items with a General Availability date that hasn't happened yet
-    .filter(i => (i.Tags||[]).includes('General Availability') &&
+    // Case-insensitive GA tag match, not yet launched
+    .filter(i => (i.Tags||[]).some(t => t.toLowerCase().includes('general availability')) &&
                  i._status !== 'Launched' && i._status !== 'Cancelled' &&
                  i.StartDateTime)
     // GA date must be in the future and within the selected window
@@ -375,9 +394,24 @@ function renderAll() {
 
   if (!items.length) {
     const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
+    // Build a diagnostic summary to display in the UI
+    const rmCount  = rmAll.length;
+    const gaCount  = rmAll.filter(i => (i.Tags||[]).some(t => t.toLowerCase().includes('general availability'))).length;
+    const fwdCount = rmAll.filter(i =>
+      (i.Tags||[]).some(t => t.toLowerCase().includes('general availability')) &&
+      i.StartDateTime && new Date(i.StartDateTime) >= today
+    ).length;
+    const diagHtml = rmCount
+      ? `<p style="font-size:11px;margin-top:8px;color:#888">
+           Loaded ${rmCount} roadmap items &nbsp;·&nbsp;
+           ${gaCount} have a GA tag &nbsp;·&nbsp;
+           ${fwdCount} of those have a future planned date
+           — try opening the browser console (F12) for more detail.
+         </p>`
+      : '';
     setContent(`<div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
-      <h3>No items found</h3><p>No items with General Availability planned within ${rl}.</p></div>`);
+      <h3>No items found</h3><p>No items with General Availability planned within ${rl}.</p>${diagHtml}</div>`);
     return;
   }
 
@@ -385,7 +419,7 @@ function renderAll() {
   const gaMax = new Date(Math.max(...items.map(i => new Date(i.StartDateTime))));
   let tMax = gaMax;
   const span = tMax - today || 86400000*30;
-  const tMin = new Date(today.getTime() - span*0.04); // small left padding so today isn't flush left
+  const tMin = new Date(today.getTime() - span*0.04);
   tMax = new Date(tMax.getTime() + span*0.06);
 
   renderTimeline(items, tMin, tMax, today);
