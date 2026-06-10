@@ -173,6 +173,61 @@
     .header-inner { flex-direction: column; }
     .controls-inner, .main { padding-left: 12px; padding-right: 12px; }
   }
+
+  /* ─── HOVER TOOLTIP ──────────────────────────────────────────── */
+  .tl-tip {
+    position: fixed;
+    z-index: 9999;
+    background: white;
+    border: 1px solid var(--ms-border);
+    border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+    padding: 14px 16px 12px;
+    max-width: 340px;
+    min-width: 240px;
+    pointer-events: none;
+    font-size: 12px;
+    line-height: 1.45;
+    display: none;
+  }
+  .tl-tip-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 8px;
+  }
+  .tl-tip-badge.s-rolling { background: var(--c-rolling); }
+  .tl-tip-badge.s-preview { background: var(--c-preview); }
+  .tl-tip-badge.s-dev     { background: var(--c-dev); }
+  .tl-tip-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--ms-text);
+    margin-bottom: 8px;
+    line-height: 1.35;
+  }
+  .tl-tip-summary {
+    color: var(--ms-text-muted);
+    font-size: 12px;
+    margin-bottom: 10px;
+    max-height: 120px;
+    overflow-y: auto;
+    line-height: 1.5;
+  }
+  .tl-tip-meta { display: flex; flex-direction: column; gap: 3px; color: var(--ms-text-muted); }
+  .tl-tip-row  { display: flex; gap: 6px; }
+  .tl-tip-lbl  { font-weight: 600; color: var(--ms-text); white-space: nowrap; }
+  .tl-tip-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .tl-tip-tag  {
+    background: var(--ms-border);
+    padding: 1px 7px;
+    border-radius: 8px;
+    font-size: 10px;
+    color: var(--ms-text-muted);
+  }
 </style>
 </head>
 <body>
@@ -310,6 +365,9 @@ function renderAll() {
     });
   }
   items = items.filter(i => i._products.length > 0);
+
+  // Populate global item map for tooltip lookups (before product filter)
+  window._tlItemMap = Object.fromEntries(items.map(i => [i.Id, i]));
 
   updatePillCounts(items);
   if (activeProduct !== 'All') items = items.filter(i => i._products.includes(activeProduct));
@@ -474,7 +532,8 @@ function buildLane(product, items, tMin, totalMs) {
     html += `
       <a class="tl-card ${sc}" href="${esc(url)}" target="_blank"
          style="left:${x.toFixed(2)}%;top:${cardTop}px"
-         data-x="${x.toFixed(2)}" data-sc="${sc}">
+         data-x="${x.toFixed(2)}" data-sc="${sc}" data-id="${esc(id)}"
+         onmouseenter="tipShow('${esc(id)}',event)" onmouseleave="tipHide()">
         <div class="tl-card-title">${esc(title)}</div>
         <span class="tl-card-badge">${badge}</span>
         ${date ? `<div class="tl-card-date">📅 ${esc(date)}</div>` : ''}
@@ -549,6 +608,60 @@ function esc(s) {
 }
 
 loadData();
+
+// ── Tooltip ───────────────────────────────────────────────────────
+const STATUS_EXCL = new Set(['In development','Preview','Rolling out','Launched','Cancelled','General Availability','Worldwide','GCC','GCC High','DoD']);
+
+function tipShow(id, ev) {
+  const item = window._tlItemMap && window._tlItemMap[id];
+  if (!item) return;
+  const tip = document.getElementById('tl-tooltip');
+  const sc    = STATUS_SC[item._status] || 's-dev';
+  const badge = STATUS_BADGE[item._status] || item._status;
+  const date  = formatDate(item.StartDateTime);
+  const mod   = formatDate(item.LastModifiedDateTime);
+  const prods = (item._products || []).join(', ');
+  const svcs  = (item.Services || []).join(', ');
+  const summary = item.Summary || '';
+  const extraTags = (item.Tags || []).filter(t => !STATUS_EXCL.has(t));
+
+  let html = `<span class="tl-tip-badge ${sc}">${badge}</span>`;
+  html += `<div class="tl-tip-title">${esc(item.Title || '')}</div>`;
+  if (summary) html += `<div class="tl-tip-summary">${esc(summary)}</div>`;
+  html += `<div class="tl-tip-meta">`;
+  if (prods)  html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Products:</span><span>${esc(prods)}</span></div>`;
+  if (svcs)   html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Services:</span><span>${esc(svcs)}</span></div>`;
+  if (date)   html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Date:</span><span>${esc(date)}</span></div>`;
+  if (mod)    html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Updated:</span><span>${esc(mod)}</span></div>`;
+  html += `</div>`;
+  if (extraTags.length) {
+    html += `<div class="tl-tip-tags">` + extraTags.map(t => `<span class="tl-tip-tag">${esc(t)}</span>`).join('') + `</div>`;
+  }
+
+  tip.innerHTML = html;
+  tip.style.display = 'block';
+  tipPos(ev);
+}
+
+function tipHide() {
+  document.getElementById('tl-tooltip').style.display = 'none';
+}
+
+function tipPos(ev) {
+  const tip = document.getElementById('tl-tooltip');
+  if (!tip || tip.style.display === 'none') return;
+  const tw = tip.offsetWidth  || 340;
+  const th = tip.offsetHeight || 200;
+  let x = ev.clientX + 18, y = ev.clientY + 18;
+  if (x + tw > window.innerWidth  - 10) x = ev.clientX - tw - 10;
+  if (y + th > window.innerHeight - 10) y = ev.clientY - th - 10;
+  tip.style.left = x + 'px';
+  tip.style.top  = y + 'px';
+}
+
+document.addEventListener('mousemove', tipPos);
 </script>
+
+<div id="tl-tooltip" class="tl-tip"></div>
 </body>
 </html>
