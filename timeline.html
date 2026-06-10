@@ -199,14 +199,14 @@
 <div class="controls">
   <div class="controls-inner">
     <div class="filter-row">
-      <span class="filter-label">Horizon:</span>
+      <span class="filter-label">Updated in last:</span>
       <select class="range-select" id="rangeSelect" onchange="renderAll()">
-        <option value="7">Next 1 week</option>
-        <option value="14">Next 2 weeks</option>
-        <option value="90">Next 3 months</option>
-        <option value="180">Next 6 months</option>
-        <option value="365" selected>Next 12 months</option>
-        <option value="0">All upcoming</option>
+        <option value="7">1 week</option>
+        <option value="14">2 weeks</option>
+        <option value="90">3 months</option>
+        <option value="180">6 months</option>
+        <option value="365" selected>12 months</option>
+        <option value="0">All time</option>
       </select>
     </div>
     <div class="filter-row">
@@ -293,7 +293,8 @@ async function loadData(forceRefresh = false) {
 function renderAll() {
   const days    = parseInt(document.getElementById('rangeSelect').value);
   const today   = new Date(); today.setHours(0,0,0,0);
-  const horizon = days > 0 ? new Date(today.getTime() + days*86400000) : null;
+  // Cutoff = how far back we look for recently-updated items
+  const cutoff  = days > 0 ? new Date(today.getTime() - days*86400000) : null;
 
   let items = allItems
     .filter(i => i.Id && i.Id.startsWith('RM'))
@@ -301,15 +302,12 @@ function renderAll() {
     .filter(i => FORWARD_STATUSES.has(i._status))
     .filter(i => i.StartDateTime);
 
-  // Show only items whose StartDateTime falls between today and the horizon
-  // (items with past dates have already been superseded by the current status date)
-  if (horizon) {
+  // Filter by how recently the item was added/updated on the roadmap
+  if (cutoff) {
     items = items.filter(i => {
-      const d = new Date(i.StartDateTime);
-      return d >= today && d <= horizon;
+      const d = new Date(i.LastModifiedDateTime || i.StartDateTime);
+      return d >= cutoff;
     });
-  } else {
-    items = items.filter(i => new Date(i.StartDateTime) >= today);
   }
   items = items.filter(i => i._products.length > 0);
 
@@ -322,7 +320,7 @@ function renderAll() {
     const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
     setContent(`<div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
-      <h3>No upcoming items found</h3><p>No roadmap entries for ${rl}.</p></div>`);
+      <h3>No items found</h3><p>No roadmap entries updated in the last ${rl}.</p></div>`);
     return;
   }
 
@@ -338,7 +336,7 @@ function renderAll() {
 
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('headerSub').textContent =
-    `${items.length} upcoming item${items.length!==1?'s':''} · ${rl} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${items.length} active item${items.length!==1?'s':''} · updated in last ${rl} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
 }
 
 // ── Timeline renderer ─────────────────────────────────────────────
@@ -534,8 +532,9 @@ function updateStatusBar(count) {
   document.getElementById('statusBar').style.display = 'flex';
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('statusText').innerHTML =
-    `Showing <strong>${count}</strong> upcoming item${count!==1?'s':''}` +
-    (activeProduct!=='All' ? ` for <strong>${activeProduct}</strong>` : '') + ` · ${rl}`;
+    `Showing <strong>${count}</strong> active item${count!==1?'s':''}` +
+    (activeProduct!=='All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    ` · updated in last ${rl}`;
 }
 function setContent(h) { document.getElementById('content').innerHTML = h; }
 function showError(m)  { const el=document.getElementById('errorBanner'); el.innerHTML='⚠ '+m; el.style.display='block'; }
