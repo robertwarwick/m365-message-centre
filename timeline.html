@@ -15,7 +15,7 @@
     --page-bg: #f3f2f1;
     --c-rolling: #7a4f00;
     --c-preview: #0078d4;
-    --c-dev: #5c2d91;
+    --c-dev:     #5c2d91;
   }
   body { font-family: 'Segoe UI', SegoeUI, Roboto, 'Helvetica Neue', Arial, sans-serif; background: var(--page-bg); color: var(--ms-text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
 
@@ -61,123 +61,99 @@
   .status-bar strong { color: var(--ms-text); }
 
   /* LEGEND */
-  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; background: white; padding: 10px 16px; border-radius: 6px; border: 1px solid var(--ms-border); font-size: 12px; }
-  .legend-item { display: flex; align-items: center; gap: 5px; color: var(--ms-text-muted); }
-  .legend-swatch { width: 12px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; background: white; padding: 10px 16px; border-radius: 6px; border: 1px solid var(--ms-border); font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: var(--ms-text-muted); }
+  .legend-chip { padding: 2px 8px; border-radius: 10px; color: white; font-size: 10px; font-weight: 600; }
 
-  /* TIMELINE OUTER */
-  .tl-outer { background: white; border: 1px solid var(--ms-border); border-radius: 6px; overflow: hidden; }
-  .tl-scroll { overflow-x: auto; }
-  .tl-inner { min-width: 680px; }
+  /* ─── TIMELINE STRUCTURE ─────────────────────────────── */
+  .tl-outer { background: white; border: 1px solid var(--ms-border); border-radius: 8px; overflow: hidden; margin-bottom: 4px; }
+  .tl-scroll { overflow-x: auto; padding-bottom: 2px; }
+  .tl-inner { min-width: 700px; }
 
-  /* LANE */
-  .tl-lane { display: grid; grid-template-columns: 160px 1fr; border-bottom: 1px solid var(--ms-border); }
+  /* Each product lane */
+  .tl-lane { display: grid; grid-template-columns: 150px 1fr; border-bottom: 1px solid var(--ms-border); }
   .tl-lane:last-child { border-bottom: none; }
   .tl-lane.focused { background: var(--ms-purple-light); }
+
   .tl-lane-label {
     border-right: 1px solid var(--ms-border);
-    padding: 14px 12px 0;
+    padding: 12px 12px 0;
     font-size: 12px;
     font-weight: 600;
     color: var(--ms-text);
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 5px;
   }
-  .tl-lane-track { position: relative; overflow: visible; }
 
-  /* AXIS, GRID, TODAY — injected by JS */
-  .tl-axis-line {
+  /* The drawing area — position:relative, height set by JS */
+  .tl-track { position: relative; }
+
+  /* ─── ELEMENTS INJECTED BY JS ──── */
+
+  /* Horizontal axis bar (grey strip, contains month labels) */
+  .tl-axis { position: absolute; left: 0; right: 0; height: 26px; background: #e8e6e4; z-index: 2; }
+
+  /* Month label on the axis */
+  .tl-month {
     position: absolute;
-    left: 0; right: 0;
-    bottom: 22px; /* = TICK_H */
-    height: 1px;
-    background: #b3b0ae;
-    pointer-events: none;
-  }
-  .tl-grid-line {
-    position: absolute;
-    top: 0; bottom: 0;
-    width: 1px;
-    background: #f0eeec;
-    pointer-events: none;
-    z-index: 0;
-  }
-  .tl-tick {
-    position: absolute;
-    bottom: 2px;
+    top: 50%;
+    transform: translate(-50%, -50%);
     font-size: 10px;
     color: var(--ms-text-muted);
-    transform: translateX(-50%);
     white-space: nowrap;
     pointer-events: none;
   }
-  .tl-today-line {
+
+  /* Vertical grid line */
+  .tl-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: #f0eeec; z-index: 0; pointer-events: none; }
+
+  /* Today marker */
+  .tl-today { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(200,60,60,0.5); z-index: 5; pointer-events: none; }
+  .tl-today-lbl { position: absolute; top: 2px; left: 4px; font-size: 9px; font-weight: 700; color: rgba(180,50,50,0.9); }
+
+  /* Dot on the axis at item's date */
+  .tl-dot {
     position: absolute;
-    top: 0; bottom: 0;
-    left: 0;
-    width: 2px;
-    background: rgba(196,67,67,0.45);
-    pointer-events: none;
-    z-index: 4;
-  }
-  .tl-today-label {
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    font-size: 9px;
-    font-weight: 600;
-    color: rgba(180,50,50,0.8);
-    white-space: nowrap;
-  }
-  .tl-axis-dot {
-    position: absolute;
-    width: 8px;
-    height: 8px;
+    width: 9px; height: 9px;
     border-radius: 50%;
     border: 2px solid white;
-    bottom: 18px; /* TICK_H - 4 = 18, centered on axis */
     transform: translateX(-50%);
-    z-index: 3;
+    z-index: 4;
     pointer-events: none;
   }
-  .tl-axis-dot.s-rolling { background: var(--c-rolling); }
-  .tl-axis-dot.s-preview { background: var(--c-preview); }
-  .tl-axis-dot.s-dev     { background: var(--c-dev); }
+  .tl-dot.s-rolling { background: var(--c-rolling); }
+  .tl-dot.s-preview { background: var(--c-preview); }
+  .tl-dot.s-dev     { background: var(--c-dev); }
 
-  /* CARD ITEMS */
-  .tl-item {
+  /* Connector line (vertical, links card to axis dot) */
+  .tl-connector { position: absolute; width: 2px; transform: translateX(-50%); background: #c8c6c4; z-index: 1; pointer-events: none; }
+
+  /* ─── CARDS ────────────────────────────────────────── */
+  .tl-card {
     position: absolute;
     transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 152px;
-    z-index: 2;
-    /* bottom set inline: = TICK_H = 22px */
-  }
-  .tl-card {
-    width: 152px;
-    background: white;
-    border: 1px solid var(--ms-border);
-    border-radius: 5px;
+    width: 140px;
+    border-radius: 8px;
     padding: 8px 10px 7px;
     text-decoration: none;
-    color: var(--ms-text);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    transition: box-shadow 0.12s, transform 0.12s;
-    flex-shrink: 0;
-  }
-  .tl-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.16); transform: translateY(-2px); z-index: 10; }
-  .tl-card.s-rolling { border-left: 3px solid var(--c-rolling); }
-  .tl-card.s-preview { border-left: 3px solid var(--c-preview); }
-  .tl-card.s-dev     { border-left: 3px solid var(--c-dev); }
-  .tl-card-title {
+    color: white;
     font-size: 11px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    transition: box-shadow 0.12s, transform 0.12s;
+    z-index: 3;
+    display: block;
+  }
+  .tl-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.28); transform: translateX(-50%) translateY(-2px); z-index: 10; }
+  .tl-card.s-rolling { background: var(--c-rolling); }
+  .tl-card.s-preview { background: var(--c-preview); }
+  .tl-card.s-dev     { background: var(--c-dev); }
+
+  .tl-card-title {
     font-weight: 600;
-    line-height: 1.35;
-    margin-bottom: 5px;
-    color: var(--ms-text);
+    font-size: 11px;
+    line-height: 1.3;
+    margin-bottom: 4px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -185,23 +161,13 @@
   }
   .tl-card-badge {
     display: inline-block;
-    font-size: 10px;
+    font-size: 9px;
     padding: 1px 6px;
     border-radius: 8px;
-    color: white;
-    margin-bottom: 4px;
+    background: rgba(255,255,255,0.25);
+    margin-bottom: 3px;
   }
-  .tl-card-badge.s-rolling { background: var(--c-rolling); }
-  .tl-card-badge.s-preview { background: var(--c-preview); }
-  .tl-card-badge.s-dev     { background: var(--c-dev); }
-  .tl-card-date { font-size: 10px; color: var(--ms-text-muted); }
-
-  /* Connector line from card bottom to axis */
-  .tl-conn {
-    width: 1px;
-    background: #c8c6c4;
-    flex-shrink: 0;
-  }
+  .tl-card-date { font-size: 10px; opacity: 0.8; }
 
   @media (max-width: 640px) {
     .header-inner { flex-direction: column; }
@@ -268,209 +234,171 @@
 </div>
 
 <script>
-// ── Layout constants (keep in sync with CSS) ──────────────────────
-const TICK_H      = 22;   // px: height of tick-label area below axis line
-const CONN_BASE   = 14;   // px: connector height for row 0
-const CARD_H      = 80;   // px: estimated card height (for row-stacking maths)
-const ROW_GAP     = 10;   // px: vertical gap between stacked card rows
-const TOP_PAD     = 16;   // px: space above the topmost card row
-const OVERLAP_PCT = 13;   // %: cards within this % are stacked into separate rows
+// ── Layout constants ──────────────────────────────────────────────
+// Keep CARD_H in sync with CSS (.tl-card min-height for maths purposes)
+const CARD_W    = 140;  // px card width (matches CSS)
+const CARD_H    = 72;   // px estimated card height
+const CONN_H    = 14;   // px connector length from axis edge to card
+const ROW_GAP   = 10;   // px gap between stacked rows on the same side
+const TOP_PAD   = 12;   // px above topmost above-row
+const BOT_PAD   = 12;   // px below bottommost below-row
+const AXIS_H    = 26;   // px height of the grey axis bar (matches CSS)
+// Collision: cards within this % of the total time span overlap
+const OVL_PCT   = 13;
 
 const FORWARD_STATUSES = new Set(['In development', 'Preview', 'Rolling out']);
 
-// ── Product config ────────────────────────────────────────────────
 const PRODUCT_RULES = {
-  'Copilot': s => { const l = s.toLowerCase(); return (l.includes('copilot') && !l.includes('copilot studio')) || l.includes('microsoft 365 copilot'); },
+  'Copilot':            s => { const l=s.toLowerCase(); return (l.includes('copilot')&&!l.includes('copilot studio'))||l.includes('microsoft 365 copilot'); },
   'Copilot Studio':     s => s.toLowerCase().includes('copilot studio'),
   'Power Platform':     s => s.toLowerCase().includes('power platform'),
-  'Power Apps':         s => s.toLowerCase().includes('power apps') || s.toLowerCase().includes('powerapps'),
+  'Power Apps':         s => s.toLowerCase().includes('power apps')||s.toLowerCase().includes('powerapps'),
   'Power Automate':     s => s.toLowerCase().includes('power automate'),
-  'Dynamics 365 Sales': s => { const l = s.toLowerCase(); return l.includes('dynamics 365 sales') || l.includes('dynamics sales') || l.includes('copilot for sales'); },
+  'Dynamics 365 Sales': s => { const l=s.toLowerCase(); return l.includes('dynamics 365 sales')||l.includes('dynamics sales')||l.includes('copilot for sales'); },
   'Business Central':   s => s.toLowerCase().includes('business central'),
 };
-const PRODUCT_ICONS = {
-  'Copilot':'🤖','Copilot Studio':'🧩','Power Platform':'⚡',
-  'Power Apps':'📱','Power Automate':'🔄','Dynamics 365 Sales':'💼','Business Central':'📊',
-};
-// status → CSS class suffix
-const STATUS_SC = { 'Rolling out':'s-rolling', 'Preview':'s-preview', 'In development':'s-dev' };
-const STATUS_BADGE = { 'Rolling out':'↗ Rolling out', 'Preview':'◎ Preview', 'In development':'⚙ In development' };
+const PRODUCT_ICONS = { 'Copilot':'🤖','Copilot Studio':'🧩','Power Platform':'⚡','Power Apps':'📱','Power Automate':'🔄','Dynamics 365 Sales':'💼','Business Central':'📊' };
+const STATUS_SC    = { 'Rolling out':'s-rolling','Preview':'s-preview','In development':'s-dev' };
+const STATUS_BADGE = { 'Rolling out':'↗ Rolling out','Preview':'◎ Preview','In development':'⚙ In development' };
 
-let allItems    = [];
-let activeProduct = 'All';
-let lastFetchTime = null;
+let allItems = [], activeProduct = 'All', lastFetchTime = null;
 
-// ── Data loading ──────────────────────────────────────────────────
+// ── Data ──────────────────────────────────────────────────────────
 async function loadData(forceRefresh = false) {
   const btn = document.getElementById('btnRefresh');
   const icon = document.getElementById('refreshIcon');
-  btn.disabled = true;
-  icon.classList.add('spin');
-  hideError();
+  btn.disabled = true; icon.classList.add('spin'); hideError();
   setContent(`<div class="state-msg">
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-    <h3>Fetching roadmap…</h3><p>Loading from mc.merill.net</p>
-  </div>`);
+    <h3>Fetching roadmap…</h3><p>Loading from mc.merill.net</p></div>`);
   try {
-    const url = forceRefresh ? 'https://mc.merill.net/messages-index.json?t=' + Date.now()
-                             : 'https://mc.merill.net/messages-index.json';
+    const url = forceRefresh ? 'https://mc.merill.net/messages-index.json?t='+Date.now() : 'https://mc.merill.net/messages-index.json';
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    allItems = Array.isArray(data) ? data : (data.items || data.messages || []);
+    allItems = Array.isArray(data) ? data : (data.items||data.messages||[]);
     lastFetchTime = new Date();
     renderAll();
-  } catch (e) {
-    showError('Failed to load data: ' + e.message);
+  } catch(e) {
+    showError('Failed to load data: '+e.message);
     setContent(`<div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
-      <h3>Could not load data</h3><p>Check your connection and try refreshing.</p>
-    </div>`);
-  } finally {
-    btn.disabled = false;
-    icon.classList.remove('spin');
-  }
+      <h3>Could not load data</h3><p>Check your connection and try refreshing.</p></div>`);
+  } finally { btn.disabled = false; icon.classList.remove('spin'); }
 }
 
 // ── Main render ───────────────────────────────────────────────────
 function renderAll() {
   const days    = parseInt(document.getElementById('rangeSelect').value);
   const today   = new Date(); today.setHours(0,0,0,0);
-  const horizon = days > 0 ? new Date(today.getTime() + days * 86400000) : null;
+  const horizon = days > 0 ? new Date(today.getTime() + days*86400000) : null;
 
-  // RM items only, with products assigned and status computed
   let items = allItems
     .filter(i => i.Id && i.Id.startsWith('RM'))
-    .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags || []) }));
+    .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags||[]) }))
+    .filter(i => FORWARD_STATUSES.has(i._status));
 
-  // Forward-looking: only active/upcoming statuses
-  items = items.filter(i => FORWARD_STATUSES.has(i._status));
-
-  // Horizon filter: keep items whose StartDateTime falls before the horizon
   if (horizon) {
-    items = items.filter(i => {
-      if (!i.StartDateTime) return false;
-      return new Date(i.StartDateTime) <= horizon;
-    });
+    items = items.filter(i => i.StartDateTime && new Date(i.StartDateTime) <= horizon);
   }
-
-  // Must match at least one tracked product
   items = items.filter(i => i._products.length > 0);
 
-  // Update pill counts before applying product filter
   updatePillCounts(items);
-
-  if (activeProduct !== 'All') {
-    items = items.filter(i => i._products.includes(activeProduct));
-  }
+  if (activeProduct !== 'All') items = items.filter(i => i._products.includes(activeProduct));
 
   updateStatusBar(items.length);
 
   if (!items.length) {
-    const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+    const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
     setContent(`<div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
-      <h3>No upcoming items found</h3>
-      <p>No roadmap entries for ${rangeLabel}. Try widening the horizon or selecting a different product.</p>
-    </div>`);
+      <h3>No upcoming items found</h3><p>No roadmap entries for ${rl}.</p></div>`);
     return;
   }
 
-  // Time axis: today → latest item date (+ 4% padding)
-  const futureDates = items
-    .map(i => i.StartDateTime ? new Date(i.StartDateTime) : null)
-    .filter(d => d && d >= today);
-
-  let tMax = futureDates.length
-    ? new Date(Math.max(...futureDates))
-    : new Date(today.getTime() + 86400000 * 90);
-  const span = tMax - today || 86400000 * 30;
-  tMax = new Date(tMax.getTime() + span * 0.06);
+  // Axis spans today → latest item date
+  const futureDates = items.map(i => i.StartDateTime ? new Date(i.StartDateTime) : null).filter(d => d && d >= today);
+  let tMax = futureDates.length ? new Date(Math.max(...futureDates)) : new Date(today.getTime()+86400000*90);
+  const span = tMax - today || 86400000*30;
+  tMax = new Date(tMax.getTime() + span*0.06);
 
   renderTimeline(items, today, tMax);
 
-  const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+  const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('headerSub').textContent =
-    `${items.length} upcoming item${items.length !== 1 ? 's' : ''} · ${rangeLabel} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${items.length} upcoming item${items.length!==1?'s':''} · ${rl} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
 }
 
 // ── Timeline renderer ─────────────────────────────────────────────
 function renderTimeline(items, tMin, tMax) {
   const totalMs = tMax - tMin;
   const ticks   = makeTicks(tMin, tMax, totalMs);
-
   const products = activeProduct === 'All' ? Object.keys(PRODUCT_RULES) : [activeProduct];
   const lanes = products
     .map(p => ({ product: p, items: items.filter(i => i._products.includes(p)) }))
     .filter(l => l.items.length > 0);
 
-  if (!lanes.length) {
-    setContent(`<div class="state-msg"><h3>No items to display</h3></div>`);
-    return;
-  }
+  if (!lanes.length) { setContent(`<div class="state-msg"><h3>No items to display</h3></div>`); return; }
 
   const lanesHtml = lanes.map(({ product, items: li }) => buildLane(product, li, tMin, totalMs)).join('');
-
-  const LEGEND_ITEMS = [
-    ['var(--c-rolling)', '↗ Rolling out'],
-    ['var(--c-preview)', '◎ Preview'],
-    ['var(--c-dev)',     '⚙ In development'],
-  ];
 
   setContent(`
     <div class="legend">
       <span class="filter-label">Status:</span>
-      ${LEGEND_ITEMS.map(([c,l]) =>
-        `<span class="legend-item"><span class="legend-swatch" style="background:${c}"></span>${l}</span>`
-      ).join('')}
-      <span class="legend-item" style="margin-left:6px">
-        <span style="display:inline-block;width:2px;height:12px;background:rgba(196,67,67,0.5);vertical-align:middle;margin-right:4px"></span>Today
+      <span class="legend-item"><span class="legend-chip" style="background:var(--c-rolling)">↗ Rolling out</span></span>
+      <span class="legend-item"><span class="legend-chip" style="background:var(--c-preview)">◎ Preview</span></span>
+      <span class="legend-item"><span class="legend-chip" style="background:var(--c-dev)">⚙ In development</span></span>
+      <span class="legend-item" style="margin-left:6px;font-size:11px">
+        <span style="display:inline-block;width:2px;height:12px;background:rgba(200,60,60,0.5);vertical-align:middle;margin-right:4px"></span>Today
       </span>
     </div>
-    <div class="tl-outer">
-      <div class="tl-scroll">
-        <div class="tl-inner">${lanesHtml}</div>
-      </div>
-    </div>`);
+    <div class="tl-outer"><div class="tl-scroll"><div class="tl-inner">${lanesHtml}</div></div></div>`);
 
-  // Inject axis lines, grid lines, tick labels, today marker and axis dots after render
+  // After render: inject axis, grid, dots, today marker into each track
   requestAnimationFrame(() => {
-    document.querySelectorAll('.tl-lane-track').forEach((track, idx) => {
-      // Horizontal axis line
-      const axLine = document.createElement('div');
-      axLine.className = 'tl-axis-line';
-      track.appendChild(axLine);
+    document.querySelectorAll('.tl-track').forEach((track, idx) => {
+      const axisY = parseInt(track.dataset.axisY);
 
-      // Vertical grid lines + tick labels
+      // Grey axis bar
+      const axBar = document.createElement('div');
+      axBar.className = 'tl-axis';
+      axBar.style.top = axisY + 'px';
+      // Month labels inside axis bar
+      ticks.forEach(t => {
+        const lbl = document.createElement('span');
+        lbl.className = 'tl-month';
+        lbl.style.left = t.pct.toFixed(2) + '%';
+        lbl.textContent = t.label;
+        axBar.appendChild(lbl);
+      });
+      track.appendChild(axBar);
+
+      // Vertical grid lines
       ticks.forEach(t => {
         const gl = document.createElement('div');
-        gl.className = 'tl-grid-line';
+        gl.className = 'tl-grid';
         gl.style.left = t.pct.toFixed(2) + '%';
         track.appendChild(gl);
-
-        const tl = document.createElement('span');
-        tl.className = 'tl-tick';
-        tl.style.left = t.pct.toFixed(2) + '%';
-        tl.textContent = t.label;
-        track.appendChild(tl);
       });
 
-      // Today marker (left edge = today)
+      // Today line (left edge = today = tMin)
       const todayEl = document.createElement('div');
-      todayEl.className = 'tl-today-line';
+      todayEl.className = 'tl-today';
+      todayEl.style.left = '0%';
       if (idx === 0) {
         const lbl = document.createElement('div');
-        lbl.className = 'tl-today-label';
+        lbl.className = 'tl-today-lbl';
         lbl.textContent = 'Today';
         todayEl.appendChild(lbl);
       }
       track.appendChild(todayEl);
 
-      // Colored axis dot for each item
-      track.querySelectorAll('.tl-item[data-x][data-sc]').forEach(itemEl => {
+      // Colored dot on axis for each item
+      track.querySelectorAll('.tl-card[data-x][data-sc]').forEach(card => {
         const dot = document.createElement('div');
-        dot.className = 'tl-axis-dot ' + itemEl.dataset.sc;
-        dot.style.left = itemEl.dataset.x + '%';
+        dot.className = 'tl-dot ' + card.dataset.sc;
+        dot.style.left  = card.dataset.x + '%';
+        dot.style.top   = (axisY + AXIS_H/2 - 4) + 'px';
         track.appendChild(dot);
       });
     });
@@ -479,123 +407,131 @@ function renderTimeline(items, tMin, tMax) {
 
 // ── Lane builder ──────────────────────────────────────────────────
 function buildLane(product, items, tMin, totalMs) {
-  const icon     = PRODUCT_ICONS[product] || '📌';
+  const icon = PRODUCT_ICONS[product] || '📌';
   const isFocused = activeProduct === product;
-  const today    = tMin; // tMin = today
 
-  // Compute x position for each item; clamp past items to left edge
-  const positioned = items.map(item => {
-    const d   = item.StartDateTime ? new Date(item.StartDateTime) : today;
-    const raw = (d - tMin) / totalMs * 100;
-    const x   = Math.max(0.5, Math.min(99.5, raw));
-    return { item, x, sc: STATUS_SC[item._status] || 's-dev' };
-  }).sort((a, b) => a.x - b.x);
+  // Position each item on the 0–100% axis
+  const placed = items.map(item => {
+    const d = item.StartDateTime ? new Date(item.StartDateTime) : tMin;
+    const x = Math.max(0.5, Math.min(99.5, (d-tMin)/totalMs*100));
+    return { item, x, sc: STATUS_SC[item._status]||'s-dev' };
+  }).sort((a,b) => a.x - b.x);
 
-  // Greedy row assignment to avoid card overlap
-  const rowEnds = [];
-  for (const p of positioned) {
+  // Alternate above/below, then assign rows within each side for collision
+  placed.forEach((p, i) => { p.side = i % 2 === 0 ? 'above' : 'below'; });
+
+  const aboveEnds = [], belowEnds = [];
+  for (const p of placed) {
+    const ends = p.side === 'above' ? aboveEnds : belowEnds;
     let row = 0;
-    while (rowEnds[row] !== undefined && p.x - rowEnds[row] < OVERLAP_PCT) row++;
-    rowEnds[row] = p.x;
+    while (ends[row] !== undefined && p.x - ends[row] < OVL_PCT) row++;
+    ends[row] = p.x;
     p.row = row;
   }
 
-  const maxRow  = Math.max(0, ...positioned.map(p => p.row));
-  const trackH  = TICK_H + CONN_BASE + maxRow * (CARD_H + ROW_GAP) + CARD_H + TOP_PAD;
+  const maxAbove = Math.max(-1, ...placed.filter(p => p.side==='above').map(p => p.row));
+  const maxBelow = Math.max(-1, ...placed.filter(p => p.side==='below').map(p => p.row));
 
-  const itemsHtml = positioned.map(({ item, x, sc, row }) => {
-    const connH = CONN_BASE + row * (CARD_H + ROW_GAP);
+  // Space above axis = TOP_PAD + rows*(CARD_H+ROW_GAP) + CONN_H
+  const aboveArea = maxAbove >= 0 ? TOP_PAD + (maxAbove+1)*(CARD_H+ROW_GAP) - ROW_GAP + CONN_H : TOP_PAD;
+  const axisY     = aboveArea;                // top of axis bar
+  const belowArea = maxBelow >= 0 ? CONN_H + (maxBelow+1)*(CARD_H+ROW_GAP) - ROW_GAP + BOT_PAD : BOT_PAD;
+  const trackH    = axisY + AXIS_H + belowArea;
+
+  let html = '';
+  for (const { item, x, sc, side, row } of placed) {
     const id    = item.Id || '';
     const title = item.Title || 'Untitled';
     const date  = formatDate(item.StartDateTime);
     const url   = item.Url || `https://mc.merill.net/message/${id}`;
     const badge = STATUS_BADGE[item._status] || item._status;
 
-    return `<div class="tl-item" style="left:${x.toFixed(2)}%;bottom:${TICK_H}px"
+    let cardTop, connTop, connHeight;
+
+    if (side === 'above') {
+      // Card above axis; connector goes from card-bottom down to axis
+      cardTop    = axisY - CONN_H - CARD_H - row*(CARD_H+ROW_GAP);
+      connTop    = cardTop + CARD_H;
+      connHeight = axisY - connTop; // = CONN_H + row*(CARD_H+ROW_GAP)
+    } else {
+      // Connector goes from axis-bottom down to card
+      connTop    = axisY + AXIS_H;
+      connHeight = CONN_H + row*(CARD_H+ROW_GAP);
+      cardTop    = connTop + connHeight;
+    }
+
+    html += `
+      <a class="tl-card ${sc}" href="${esc(url)}" target="_blank"
+         style="left:${x.toFixed(2)}%;top:${cardTop}px"
          data-x="${x.toFixed(2)}" data-sc="${sc}">
-      <a class="tl-card ${sc}" href="${esc(url)}" target="_blank">
         <div class="tl-card-title">${esc(title)}</div>
-        <span class="tl-card-badge ${sc}">${badge}</span>
+        <span class="tl-card-badge">${badge}</span>
         ${date ? `<div class="tl-card-date">📅 ${esc(date)}</div>` : ''}
       </a>
-      <div class="tl-conn" style="height:${connH}px"></div>
-    </div>`;
-  }).join('');
+      <div class="tl-connector" style="left:${x.toFixed(2)}%;top:${connTop}px;height:${connHeight}px"></div>`;
+  }
 
-  return `<div class="tl-lane${isFocused ? ' focused' : ''}">
-    <div class="tl-lane-label">${icon} ${esc(product)}</div>
-    <div class="tl-lane-track" style="height:${trackH}px">${itemsHtml}</div>
-  </div>`;
+  return `
+    <div class="tl-lane${isFocused ? ' focused' : ''}">
+      <div class="tl-lane-label">${icon} ${esc(product)}</div>
+      <div class="tl-track" style="height:${trackH}px" data-axis-y="${axisY}">${html}</div>
+    </div>`;
 }
 
 // ── Tick generator ────────────────────────────────────────────────
 function makeTicks(tMin, tMax, totalMs) {
-  const days        = totalMs / 86400000;
-  const isQuarterly = days > 400;
-  const fmt         = { month: 'short', year: '2-digit' };
-  const ticks       = [];
-
-  const d = new Date(tMin);
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
-  if (d < tMin) d.setMonth(d.getMonth() + 1);
-
+  const days = totalMs/86400000;
+  const isQ  = days > 400;
+  const fmt  = { month:'short', year:'2-digit' };
+  const ticks = [];
+  const d = new Date(tMin); d.setDate(1); d.setHours(0,0,0,0);
+  if (d < tMin) d.setMonth(d.getMonth()+1);
   while (d <= tMax) {
-    if (!isQuarterly || d.getMonth() % 3 === 0) {
-      const pct = (d - tMin) / totalMs * 100;
-      if (pct >= 0 && pct <= 100) ticks.push({ pct, label: d.toLocaleDateString('en-GB', fmt) });
+    if (!isQ || d.getMonth()%3===0) {
+      const pct = (d-tMin)/totalMs*100;
+      if (pct>=0 && pct<=100) ticks.push({ pct, label: d.toLocaleDateString('en-GB', fmt) });
     }
-    d.setMonth(d.getMonth() + 1);
+    d.setMonth(d.getMonth()+1);
   }
   return ticks;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
 function getPrimaryStatus(tags) {
-  for (const s of ['Rolling out', 'Preview', 'In development', 'Launched', 'Cancelled'])
-    if (tags.includes(s)) return s;
+  for (const s of ['Rolling out','Preview','In development','Launched','Cancelled']) if (tags.includes(s)) return s;
   return 'Unknown';
 }
-
 function getProducts(item) {
-  const combined = [...(item.Services || []), item.Title || '', item.Summary || ''];
-  return Object.entries(PRODUCT_RULES).filter(([, fn]) => combined.some(s => fn(s))).map(([p]) => p);
+  const c = [...(item.Services||[]), item.Title||'', item.Summary||''];
+  return Object.entries(PRODUCT_RULES).filter(([,fn])=>c.some(s=>fn(s))).map(([p])=>p);
 }
-
 function updatePillCounts(items) {
   document.querySelectorAll('.pill[data-product]').forEach(pill => {
-    const countEl = pill.querySelector('.pill-count');
-    if (!countEl) return;
-    const p = pill.dataset.product;
-    countEl.textContent = p === 'All' ? items.length : items.filter(i => i._products.includes(p)).length;
+    const el = pill.querySelector('.pill-count'); if (!el) return;
+    const p  = pill.dataset.product;
+    el.textContent = p==='All' ? items.length : items.filter(i=>i._products.includes(p)).length;
   });
 }
-
 function setProduct(p) {
   activeProduct = p;
-  document.querySelectorAll('.pill[data-product]').forEach(el => el.classList.toggle('active', el.dataset.product === p));
+  document.querySelectorAll('.pill[data-product]').forEach(el=>el.classList.toggle('active', el.dataset.product===p));
   renderAll();
 }
-
 function updateStatusBar(count) {
   document.getElementById('statusBar').style.display = 'flex';
-  const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+  const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('statusText').innerHTML =
-    `Showing <strong>${count}</strong> upcoming item${count !== 1 ? 's' : ''}` +
-    (activeProduct !== 'All' ? ` for <strong>${activeProduct}</strong>` : '') +
-    ` · ${rangeLabel}`;
+    `Showing <strong>${count}</strong> upcoming item${count!==1?'s':''}` +
+    (activeProduct!=='All' ? ` for <strong>${activeProduct}</strong>` : '') + ` · ${rl}`;
 }
-
-function setContent(html) { document.getElementById('content').innerHTML = html; }
-function showError(msg)    { const el = document.getElementById('errorBanner'); el.innerHTML = '⚠ ' + msg; el.style.display = 'block'; }
-function hideError()       { document.getElementById('errorBanner').style.display = 'none'; }
-
+function setContent(h) { document.getElementById('content').innerHTML = h; }
+function showError(m)  { const el=document.getElementById('errorBanner'); el.innerHTML='⚠ '+m; el.style.display='block'; }
+function hideError()   { document.getElementById('errorBanner').style.display='none'; }
 function formatDate(iso) {
   if (!iso) return '';
-  try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  try { return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
   catch { return iso.split('T')[0]; }
 }
-
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
