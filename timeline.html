@@ -318,7 +318,7 @@ const PRODUCT_ICONS = { 'Copilot':'🤖','Copilot Studio':'🧩','Power Platform
 const STATUS_SC    = { 'Rolling out':'s-rolling','Preview':'s-preview','In development':'s-dev' };
 const STATUS_BADGE = { 'Rolling out':'↗ Rolling out','Preview':'◎ Preview','In development':'⚙ In development' };
 
-const RSS_URL = 'https://www.microsoft.com/releasecommunications/api/v2/m365/rss';
+const DATA_URL = 'https://mc.merill.net/messages-index.json';
 
 const MONTH_MAP = {
   january:1,february:2,march:3,april:4,may:5,june:6,
@@ -337,32 +337,12 @@ function parseCYDate(str) {
   if (yM) return new Date(parseInt(yM[1]),11,1);
   return null;
 }
-function parseDescription(raw) {
-  const text = raw.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
-                   .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').trim();
+function extractGADate(summary) {
+  if (!summary) return null;
+  const text = summary.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+                       .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').trim();
   const gM = text.match(/GA date:\s*(.+?)(?:\n|$)/i);
-  const gaDate = gM ? parseCYDate(gM[1].trim()) : null;
-  const summary = text.replace(/\n?GA date:.+$/im,'').trim();
-  return { summary, gaDate };
-}
-function parseRSSItem(node) {
-  const getText = sel => node.querySelector(sel)?.textContent?.trim() || '';
-  const categories = [...node.querySelectorAll('category')].map(c => c.textContent.trim());
-  const { summary, gaDate } = parseDescription(getText('description'));
-  let lastMod = '';
-  for (const el of node.getElementsByTagName('*')) { if (el.localName==='updated') { lastMod=el.textContent.trim(); break; } }
-  return {
-    Id: 'RM' + getText('guid'),
-    Title: getText('title'),
-    Summary: summary,
-    Tags: categories,
-    Services: categories,
-    Url: getText('link'),
-    StartDateTime: getText('pubDate') ? new Date(getText('pubDate')).toISOString() : '',
-    LastModifiedDateTime: lastMod,
-    IsMajorChange: false,
-    _gaDate: gaDate,
-  };
+  return gM ? parseCYDate(gM[1].trim()) : null;
 }
 
 let allItems = [], activeProduct = 'All', lastFetchTime = null;
@@ -374,15 +354,13 @@ async function loadData(forceRefresh = false) {
   btn.disabled = true; icon.classList.add('spin'); hideError();
   setContent(`<div class="state-msg">
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-    <h3>Fetching roadmap…</h3><p>Loading from Microsoft</p></div>`);
+    <h3>Fetching roadmap…</h3><p>Loading from mc.merill.net</p></div>`);
   try {
-    const url = RSS_URL + (forceRefresh ? '?t='+Date.now() : '');
-    const res = await fetch(url);
+    const res = await fetch(DATA_URL + (forceRefresh ? '?t='+Date.now() : ''));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    const xml = new DOMParser().parseFromString(text, 'application/xml');
-    if (xml.querySelector('parsererror')) throw new Error('XML parse error');
-    allItems = [...xml.querySelectorAll('item')].map(parseRSSItem);
+    const data = await res.json();
+    const raw = Array.isArray(data) ? data : (data.items||data.messages||[]);
+    allItems = raw.map(i => ({ ...i, _gaDate: extractGADate(i.Summary || '') }));
     lastFetchTime = new Date();
     renderAll();
   } catch(e) {
