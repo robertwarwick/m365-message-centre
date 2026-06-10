@@ -474,17 +474,62 @@
     <div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
       <h3>Loading…</h3>
-      <p>Fetching roadmap from mc.merill.net</p>
+      <p>Fetching roadmap from Microsoft</p>
     </div>
   </div>
 </div>
 
 <div class="footer">
-  Data sourced from <a href="https://mc.merill.net" target="_blank" style="color:var(--ms-purple)">mc.merill.net</a> — Microsoft 365 Roadmap archive
+  Data sourced from <a href="https://www.microsoft.com/microsoft-365/roadmap" target="_blank" style="color:var(--ms-purple)">Microsoft 365 Roadmap</a>
 </div>
 
 <script>
-const DATA_URL = 'https://mc.merill.net/messages-index.json';
+const RSS_URL = 'https://www.microsoft.com/releasecommunications/api/v2/m365/rss';
+
+const MONTH_MAP = {
+  january:1,february:2,march:3,april:4,may:5,june:6,
+  july:7,august:8,september:9,october:10,november:11,december:12,
+  jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12
+};
+function parseCYDate(str) {
+  if (!str) return null;
+  const mM = str.match(/^([A-Za-z]+)\s+CY(\d{4})$/i);
+  if (mM) { const m = MONTH_MAP[mM[1].toLowerCase()]; if (m) return new Date(parseInt(mM[2]),m-1,1); }
+  const qM = str.match(/^Q([1-4])\s+CY(\d{4})$/i);
+  if (qM) return new Date(parseInt(qM[2]),[3,6,9,12][parseInt(qM[1])-1]-1,1);
+  const hM = str.match(/^H([12])\s+CY(\d{4})$/i);
+  if (hM) return new Date(parseInt(hM[2]),hM[1]==='1'?5:11,1);
+  const yM = str.match(/CY(\d{4})/i);
+  if (yM) return new Date(parseInt(yM[1]),11,1);
+  return null;
+}
+function parseDescription(raw) {
+  const text = raw.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+                   .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').trim();
+  const gM = text.match(/GA date:\s*(.+?)(?:\n|$)/i);
+  const gaDate = gM ? parseCYDate(gM[1].trim()) : null;
+  const summary = text.replace(/\n?GA date:.+$/im,'').trim();
+  return { summary, gaDate };
+}
+function parseRSSItem(node) {
+  const getText = sel => node.querySelector(sel)?.textContent?.trim() || '';
+  const categories = [...node.querySelectorAll('category')].map(c => c.textContent.trim());
+  const { summary, gaDate } = parseDescription(getText('description'));
+  let lastMod = '';
+  for (const el of node.getElementsByTagName('*')) { if (el.localName==='updated') { lastMod=el.textContent.trim(); break; } }
+  return {
+    Id: 'RM' + getText('guid'),
+    Title: getText('title'),
+    Summary: summary,
+    Tags: categories,
+    Services: categories,
+    Url: getText('link'),
+    StartDateTime: getText('pubDate') ? new Date(getText('pubDate')).toISOString() : '',
+    LastModifiedDateTime: lastMod,
+    IsMajorChange: false,
+    _gaDate: gaDate,
+  };
+}
 
 const PRODUCT_RULES = {
   'Copilot': (s) => {
@@ -526,15 +571,16 @@ async function loadData(forceRefresh = false) {
   setContent(`
     <div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      <h3>Fetching roadmap…</h3><p>Loading from mc.merill.net</p>
+      <h3>Fetching roadmap…</h3><p>Loading from Microsoft</p>
     </div>`);
   try {
-    const res = await fetch(DATA_URL + (forceRefresh ? '?t=' + Date.now() : ''), {
-      cache: forceRefresh ? 'reload' : 'default'
-    });
+    const url = RSS_URL + (forceRefresh ? '?t=' + Date.now() : '');
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    const data = await res.json();
-    allItems = Array.isArray(data) ? data : (data.items || data.messages || []);
+    const text = await res.text();
+    const xml = new DOMParser().parseFromString(text, 'application/xml');
+    if (xml.querySelector('parsererror')) throw new Error('XML parse error');
+    allItems = [...xml.querySelectorAll('item')].map(parseRSSItem);
     lastFetchTime = new Date();
     renderAll();
   } catch (err) {
@@ -669,7 +715,7 @@ function renderSection(product, items, query) {
 function renderCard(item, query) {
   const id = item.Id || '';
   const title = highlight(item.Title || 'Untitled', query);
-  const url = item.Url || `https://mc.merill.net/message/${id}`;
+  const url = item.Url || `https://www.microsoft.com/microsoft-365/roadmap?id=${id.replace('RM','')}`;
   const summary = highlight(item.Summary || '', query);
   const tags = item.Tags || [];
   const services = item.Services || [];
@@ -692,15 +738,12 @@ function renderCard(item, query) {
 
   // Date pills
   let datePills = '';
-  const hasGA = tags.includes('General Availability');
-  const hasPreview = tags.includes('Preview');
-  if (startDate) {
-    const d = formatDate(startDate);
-    if (primaryStatus === 'Launched') datePills += `<span class="date-pill ga">✓ Launched: ${d}</span>`;
-    else if (primaryStatus === 'Rolling out') datePills += `<span class="date-pill rolling">↗ Rolling out from: ${d}</span>`;
-    else if (primaryStatus === 'Preview' || hasPreview) datePills += `<span class="date-pill preview">◎ Preview: ${d}</span>`;
-    else if (primaryStatus === 'In development') datePills += `<span class="date-pill dev">⚙ Expected: ${d}</span>`;
-    if (hasGA && primaryStatus !== 'Launched') datePills += `<span class="date-pill ga">✓ GA: ${d}</span>`;
+  if (item._gaDate) {
+    const d = item._gaDate.toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+    if (primaryStatus === 'Launched') datePills += `<span class="date-pill ga">✓ Launched</span>`;
+    else datePills += `<span class="date-pill ga">✓ GA: ${d}</span>`;
+  } else if (modDate) {
+    datePills += `<span class="date-pill dev">📅 Updated: ${formatDate(modDate)}</span>`;
   }
 
   // Scope tags (GCC, DoD, Worldwide etc.)
@@ -717,7 +760,7 @@ function renderCard(item, query) {
       <div class="card-meta">
         <span class="meta-id">${esc(id)}</span>
         ${metaDate ? `<span>📅 ${esc(metaDate)}</span>` : ''}
-        ${services.slice(0,3).map(s => `<span style="color:var(--ms-text-muted)">${esc(s)}</span>`).join('<span style="color:#c8c6c4"> · </span>')}
+        ${services.filter(s=>!['Launched','In development','Rolling out','Preview','Cancelled','General Availability'].includes(s)).slice(0,3).map(s => `<span style="color:var(--ms-text-muted)">${esc(s)}</span>`).join('<span style="color:#c8c6c4"> · </span>')}
       </div>
       ${primaryStatus !== 'Launched' && primaryStatus !== 'Cancelled' ? `
         <div class="timeline-bar">
@@ -733,11 +776,7 @@ function renderCard(item, query) {
       <div class="card-links">
         <a class="card-link" href="${esc(url)}" target="_blank">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v2H3v10h10V9h2v6H1V1zm9 0h5v5h-2V4.414l-6.293 6.293-1.414-1.414L11.586 3H10V1z"/></svg>
-          View on mc.merill.net
-        </a>
-        <a class="card-link" href="https://www.microsoft.com/en-us/microsoft-365/roadmap?searchterms=${esc(id.replace('RM',''))}" target="_blank">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h6v2H3v10h10V9h2v6H1V1zm9 0h5v5h-2V4.414l-6.293 6.293-1.414-1.414L11.586 3H10V1z"/></svg>
-          Microsoft Roadmap
+          View on Microsoft Roadmap
         </a>
       </div>
     </div>`;
