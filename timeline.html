@@ -395,9 +395,20 @@ function renderAll() {
 
   if (!items.length) {
     const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
+    const rmAll   = allItems.filter(i => i.Id && i.Id.startsWith('RM'));
+    const fwdAll  = rmAll.filter(i => FORWARD_STATUSES.has(getPrimaryStatus(i.Tags||[])));
+    const gaAll   = fwdAll.filter(i => i._gaDate);
+    const futureAll = gaAll.filter(i => i._gaDate >= today);
     setContent(`<div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
-      <h3>No items found</h3><p>No roadmap items with General Availability planned within the next ${rl}.</p></div>`);
+      <h3>No items found</h3>
+      <p>No roadmap items with General Availability planned within the next ${rl}.</p>
+      <p style="margin-top:10px;font-size:11px;color:#8a8886;line-height:1.8">
+        ${rmAll.length} RM items loaded ·
+        ${fwdAll.length} in development/preview/rolling out ·
+        ${gaAll.length} have a GA date parsed ·
+        ${futureAll.length} have a future GA date
+      </p></div>`);
     return;
   }
 
