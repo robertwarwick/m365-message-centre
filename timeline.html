@@ -296,10 +296,11 @@ function renderAll() {
   let items = allItems
     .filter(i => i.Id && i.Id.startsWith('RM'))
     .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags||[]) }))
-    .filter(i => FORWARD_STATUSES.has(i._status));
+    .filter(i => FORWARD_STATUSES.has(i._status))
+    .filter(i => i.StartDateTime && new Date(i.StartDateTime) >= today); // GA date must be in the future
 
   if (horizon) {
-    items = items.filter(i => i.StartDateTime && new Date(i.StartDateTime) <= horizon);
+    items = items.filter(i => new Date(i.StartDateTime) <= horizon);
   }
   items = items.filter(i => i._products.length > 0);
 
@@ -316,8 +317,8 @@ function renderAll() {
     return;
   }
 
-  // Axis spans today → latest item date
-  const futureDates = items.map(i => i.StartDateTime ? new Date(i.StartDateTime) : null).filter(d => d && d >= today);
+  // Axis spans today → latest GA date (all items guaranteed to have future StartDateTime)
+  const futureDates = items.map(i => new Date(i.StartDateTime));
   let tMax = futureDates.length ? new Date(Math.max(...futureDates)) : new Date(today.getTime()+86400000*90);
   const span = tMax - today || 86400000*30;
   tMax = new Date(tMax.getTime() + span*0.06);
@@ -466,7 +467,7 @@ function buildLane(product, items, tMin, totalMs) {
          data-x="${x.toFixed(2)}" data-sc="${sc}">
         <div class="tl-card-title">${esc(title)}</div>
         <span class="tl-card-badge">${badge}</span>
-        ${date ? `<div class="tl-card-date">📅 ${esc(date)}</div>` : ''}
+        ${date ? `<div class="tl-card-date">GA: ${esc(date)}</div>` : ''}
       </a>
       <div class="tl-connector" style="left:${x.toFixed(2)}%;top:${connTop}px;height:${connHeight}px"></div>`;
   }
