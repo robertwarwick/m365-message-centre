@@ -7,24 +7,24 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --ms-purple: #5c2d91;
-    --ms-purple-light: #f3f0ff;
-    --ms-text: #11100f;
+    --ms-purple: #00864F;
+    --ms-purple-light: #E6F5EE;
+    --ms-text: #231F20;
     --ms-text-muted: #605e5c;
     --ms-border: #edebe9;
     --page-bg: #f3f2f1;
-    --c-rolling: #7a4f00;
-    --c-preview: #0078d4;
-    --c-dev:     #5c2d91;
+    --c-rolling: #005C35;
+    --c-preview: #007A45;
+    --c-dev:     #00864F;
   }
   body { font-family: 'Segoe UI', SegoeUI, Roboto, 'Helvetica Neue', Arial, sans-serif; background: var(--page-bg); color: var(--ms-text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
 
   /* NAV */
-  .topnav { background: #1a1a2e; display: flex; align-items: center; padding: 0 24px; }
+  .topnav { background: #231F20; display: flex; align-items: center; padding: 0 24px; }
   .topnav-brand { color: white; font-size: 13px; font-weight: 600; padding: 10px 16px 10px 0; margin-right: 8px; border-right: 1px solid rgba(255,255,255,0.15); white-space: nowrap; text-decoration: none; }
   .topnav a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 13px; padding: 10px 14px; display: inline-block; transition: color 0.15s; border-bottom: 2px solid transparent; }
   .topnav a:hover { color: white; }
-  .topnav a.active { color: white; border-bottom-color: #a88bff; }
+  .topnav a.active { color: white; border-bottom-color: #00864F; }
 
   /* HEADER */
   .header { background: var(--ms-purple); color: white; padding: 20px 24px 16px; }
@@ -47,7 +47,7 @@
   .pill { padding: 5px 12px 4px; border-radius: 16px; border: 1px solid #c8c6c4; font-size: 12px; cursor: pointer; background: white; color: var(--ms-text); font-family: inherit; transition: all 0.15s; white-space: nowrap; display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
   .pill:hover { border-color: var(--ms-purple); color: var(--ms-purple); }
   .pill.active { background: var(--ms-purple); border-color: var(--ms-purple); color: white; }
-  .pill.active:hover { background: #4b0082; }
+  .pill.active:hover { background: #006640; }
   .pill-count { font-size: 10px; font-weight: 600; line-height: 1; opacity: 0.6; }
   .pill.active .pill-count { opacity: 0.85; }
 
