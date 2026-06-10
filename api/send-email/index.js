@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+const https = require('https');
 
 module.exports = async function (context, req) {
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
@@ -13,28 +13,18 @@ module.exports = async function (context, req) {
     return;
   }
 
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
+  const tenantId = process.env.GRAPH_TENANT_ID;
+  const clientId = process.env.GRAPH_CLIENT_ID;
+  const clientSecret = process.env.GRAPH_CLIENT_SECRET;
+  const from = process.env.SMTP_FROM;
 
-  if (!smtpHost || !smtpUser || !smtpPass) {
+  if (!tenantId || !clientId || !clientSecret || !from) {
     context.res = {
       status: 503,
-      body: 'Email service not configured. Set SMTP_HOST, SMTP_USER and SMTP_PASS in application settings.',
+      body: 'Email service not configured. Set GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET and SMTP_FROM in application settings.',
     };
     return;
   }
-
-  const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const secure = process.env.SMTP_SECURE === 'true';
-  const from = process.env.SMTP_FROM || smtpUser;
-
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port,
-    secure,
-    auth: { user: smtpUser, pass: smtpPass },
-  });
 
   const now = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   const title = pageTitle || 'M365 Items';
@@ -42,7 +32,8 @@ module.exports = async function (context, req) {
   const html = buildHtml(title, items, now);
 
   try {
-    await transporter.sendMail({ from, to, subject, html });
+    const token = await getAccessToken(tenantId, clientId, clientSecret);
+    await sendMail(token, from, to, subject, html);
     context.res = { status: 200, body: 'OK' };
   } catch (err) {
     context.log.error('Email send failed:', err.message);
@@ -50,13 +41,90 @@ module.exports = async function (context, req) {
   }
 };
 
+function getAccessToken(tenantId, clientId, clientSecret) {
+  const params = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: clientId,
+    client_secret: clientSecret,
+    scope: 'https://graph.microsoft.com/.default',
+  }).toString();
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'login.microsoftonline.com',
+      path: `/${tenantId}/oauth2/v2.0/token`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(params),
+      },
+    }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (json.access_token) resolve(json.access_token);
+          else reject(new Error(json.error_description || json.error || 'Failed to get access token'));
+        } catch (e) {
+          reject(new Error('Invalid token response'));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(params);
+    req.end();
+  });
+}
+
+function sendMail(token, from, to, subject, html) {
+  const payload = JSON.stringify({
+    message: {
+      subject,
+      body: { contentType: 'HTML', content: html },
+      toRecipients: [{ emailAddress: { address: to } }],
+    },
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'graph.microsoft.com',
+      path: `/v1.0/users/${encodeURIComponent(from)}/sendMail`,
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        if (res.statusCode === 202) {
+          resolve();
+        } else {
+          try {
+            const json = JSON.parse(data);
+            reject(new Error(json.error?.message || `Graph API returned ${res.statusCode}`));
+          } catch {
+            reject(new Error(`Graph API returned ${res.statusCode}`));
+          }
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
 function buildHtml(title, items, date) {
   const statusStyle = {
-    'Launched':       ['#00864F', 'white',   '✓ Launched'],
-    'Rolling out':    ['#fff4ce', '#7a4f00', '↗ Rolling out'],
-    'Preview':        ['#e6f2fb', '#0078d4', '◎ Preview'],
-    'In development': ['#E6F5EE', '#00864F', '⚙ In development'],
-    'Cancelled':      ['#fde7e9', '#c50f1f', '✕ Cancelled'],
+    'Launched':       ['#00864F', 'white',   '&#10003; Launched'],
+    'Rolling out':    ['#fff4ce', '#7a4f00', '&#8599; Rolling out'],
+    'Preview':        ['#e6f2fb', '#0078d4', '&#9678; Preview'],
+    'In development': ['#E6F5EE', '#00864F', '&#9881; In development'],
+    'Cancelled':      ['#fde7e9', '#c50f1f', '&#10005; Cancelled'],
   };
 
   const badge = (status) => {
@@ -74,13 +142,13 @@ function buildHtml(title, items, date) {
           <div style="margin-bottom:5px">
             <a href="${esc(item.url)}" style="font-size:14px;font-weight:600;color:#00864F;text-decoration:none">${esc(item.title)}</a>
           </div>
-          <div style="font-size:12px;color:#605e5c;margin-bottom:6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <div style="font-size:12px;color:#605e5c;margin-bottom:6px">
             <span style="font-family:Courier New,monospace;font-weight:600;color:#231F20">${esc(item.id)}</span>
-            ${d ? `<span>📅 ${d}</span>` : ''}
-            ${products ? `<span>${esc(products)}</span>` : ''}
-            ${item.status ? badge(item.status) : ''}
+            ${d ? ` &nbsp;&middot;&nbsp; &#128197; ${d}` : ''}
+            ${products ? ` &nbsp;&middot;&nbsp; ${esc(products)}` : ''}
+            ${item.status ? ` &nbsp;&nbsp;${badge(item.status)}` : ''}
           </div>
-          ${item.summary ? `<div style="font-size:13px;color:#231F20;line-height:1.5">${esc(item.summary)}${item.summary.length >= 400 ? '…' : ''}</div>` : ''}
+          ${item.summary ? `<div style="font-size:13px;color:#231F20;line-height:1.5">${esc(item.summary)}${item.summary.length >= 400 ? '&hellip;' : ''}</div>` : ''}
         </td>
       </tr>`;
   }).join('');
@@ -96,7 +164,7 @@ function buildHtml(title, items, date) {
     <tr>
       <td style="background:#00864F;padding:20px 24px">
         <div style="font-size:20px;font-weight:600;color:white;margin-bottom:4px">${esc(title)}</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.85)">${items.length} item${items.length !== 1 ? 's' : ''} &nbsp;·&nbsp; ${date}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.85)">${items.length} item${items.length !== 1 ? 's' : ''} &nbsp;&middot;&nbsp; ${date}</div>
       </td>
     </tr>
     <tr>
