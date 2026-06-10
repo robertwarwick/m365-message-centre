@@ -13,6 +13,9 @@
     --ms-text-muted: #605e5c;
     --ms-border: #edebe9;
     --page-bg: #f3f2f1;
+    --c-rolling: #7a4f00;
+    --c-preview: #0078d4;
+    --c-dev: #5c2d91;
   }
   body { font-family: 'Segoe UI', SegoeUI, Roboto, 'Helvetica Neue', Arial, sans-serif; background: var(--page-bg); color: var(--ms-text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
 
@@ -60,64 +63,145 @@
   /* LEGEND */
   .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; background: white; padding: 10px 16px; border-radius: 6px; border: 1px solid var(--ms-border); font-size: 12px; }
   .legend-item { display: flex; align-items: center; gap: 5px; color: var(--ms-text-muted); }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-swatch { width: 12px; height: 3px; border-radius: 2px; flex-shrink: 0; }
 
   /* TIMELINE OUTER */
   .tl-outer { background: white; border: 1px solid var(--ms-border); border-radius: 6px; overflow: hidden; }
   .tl-scroll { overflow-x: auto; }
-  .tl-inner { min-width: 640px; }
-
-  /* AXIS ROW */
-  .tl-axis-row { display: grid; grid-template-columns: 162px 1fr; border-bottom: 2px solid var(--ms-border); background: #faf9f8; }
-  .tl-axis-spacer { border-right: 1px solid var(--ms-border); padding: 6px 12px 6px; font-size: 11px; color: var(--ms-text-muted); display: flex; align-items: flex-end; font-weight: 500; }
-  .tl-axis-ticks { position: relative; height: 34px; }
-  .tl-tick { position: absolute; font-size: 10px; color: var(--ms-text-muted); white-space: nowrap; bottom: 5px; transform: translateX(-50%); }
-  .tl-tick::before { content:''; position:absolute; top:-7px; left:50%; width:1px; height:5px; background:#d0cecc; }
+  .tl-inner { min-width: 680px; }
 
   /* LANE */
-  .tl-lane { display: grid; grid-template-columns: 162px 1fr; border-bottom: 1px solid var(--ms-border); }
+  .tl-lane { display: grid; grid-template-columns: 160px 1fr; border-bottom: 1px solid var(--ms-border); }
   .tl-lane:last-child { border-bottom: none; }
   .tl-lane.focused { background: var(--ms-purple-light); }
-  .tl-lane-label { border-right: 1px solid var(--ms-border); padding: 12px 12px 0; font-size: 12px; font-weight: 600; color: var(--ms-text); display: flex; align-items: flex-start; gap: 5px; min-height: 56px; }
-  .tl-lane-track { position: relative; }
+  .tl-lane-label {
+    border-right: 1px solid var(--ms-border);
+    padding: 14px 12px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ms-text);
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  .tl-lane-track { position: relative; overflow: visible; }
 
-  /* DECORATIONS */
-  .tl-grid-line { position: absolute; top: 0; bottom: 0; width: 1px; background: #efedeb; pointer-events: none; z-index: 0; }
-  .tl-today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(196,67,67,0.45); z-index: 3; pointer-events: none; }
-  .tl-today-label { position: absolute; top: 3px; left: 4px; font-size: 9px; color: rgba(180,50,50,0.75); white-space: nowrap; font-weight: 600; }
+  /* AXIS, GRID, TODAY — injected by JS */
+  .tl-axis-line {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 22px; /* = TICK_H */
+    height: 1px;
+    background: #b3b0ae;
+    pointer-events: none;
+  }
+  .tl-grid-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: #f0eeec;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .tl-tick {
+    position: absolute;
+    bottom: 2px;
+    font-size: 10px;
+    color: var(--ms-text-muted);
+    transform: translateX(-50%);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .tl-today-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0;
+    width: 2px;
+    background: rgba(196,67,67,0.45);
+    pointer-events: none;
+    z-index: 4;
+  }
+  .tl-today-label {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(180,50,50,0.8);
+    white-space: nowrap;
+  }
+  .tl-axis-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid white;
+    bottom: 18px; /* TICK_H - 4 = 18, centered on axis */
+    transform: translateX(-50%);
+    z-index: 3;
+    pointer-events: none;
+  }
+  .tl-axis-dot.s-rolling { background: var(--c-rolling); }
+  .tl-axis-dot.s-preview { background: var(--c-preview); }
+  .tl-axis-dot.s-dev     { background: var(--c-dev); }
 
-  /* ITEMS */
-  .tl-item { position: absolute; transform: translateX(-50%); z-index: 2; text-decoration: none; }
-  .tl-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.22); transition: transform 0.12s, box-shadow 0.12s; }
-  .tl-item:hover .tl-dot { transform: scale(1.55); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
-  .tl-dot.s-launched      { background: #107c10; }
-  .tl-dot.s-rollingout    { background: #7a4f00; }
-  .tl-dot.s-preview       { background: #0078d4; }
-  .tl-dot.s-indevelopment { background: #5c2d91; }
-  .tl-dot.s-cancelled     { background: #c50f1f; }
-  .tl-dot.s-unknown       { background: #a19f9d; }
+  /* CARD ITEMS */
+  .tl-item {
+    position: absolute;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 152px;
+    z-index: 2;
+    /* bottom set inline: = TICK_H = 22px */
+  }
+  .tl-card {
+    width: 152px;
+    background: white;
+    border: 1px solid var(--ms-border);
+    border-radius: 5px;
+    padding: 8px 10px 7px;
+    text-decoration: none;
+    color: var(--ms-text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    transition: box-shadow 0.12s, transform 0.12s;
+    flex-shrink: 0;
+  }
+  .tl-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.16); transform: translateY(-2px); z-index: 10; }
+  .tl-card.s-rolling { border-left: 3px solid var(--c-rolling); }
+  .tl-card.s-preview { border-left: 3px solid var(--c-preview); }
+  .tl-card.s-dev     { border-left: 3px solid var(--c-dev); }
+  .tl-card-title {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+    margin-bottom: 5px;
+    color: var(--ms-text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .tl-card-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    color: white;
+    margin-bottom: 4px;
+  }
+  .tl-card-badge.s-rolling { background: var(--c-rolling); }
+  .tl-card-badge.s-preview { background: var(--c-preview); }
+  .tl-card-badge.s-dev     { background: var(--c-dev); }
+  .tl-card-date { font-size: 10px; color: var(--ms-text-muted); }
 
-  /* Label shown only when lane is focused */
-  .tl-item-label { display: none; position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--ms-text-muted); white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis; pointer-events: none; text-align: center; }
-  .tl-lane.focused .tl-item-label { display: block; }
-
-  /* TOOLTIP */
-  .tl-tooltip { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); background: #1a1a2e; color: white; padding: 10px 12px; border-radius: 6px; font-size: 12px; width: 230px; pointer-events: none; opacity: 0; transition: opacity 0.12s; z-index: 50; box-shadow: 0 4px 16px rgba(0,0,0,0.3); line-height: 1.4; }
-  .tl-tooltip::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:#1a1a2e; }
-  .tl-item:hover .tl-tooltip { opacity: 1; }
-  .tl-item.edge-left  .tl-tooltip { left: 0; transform: none; }
-  .tl-item.edge-left  .tl-tooltip::after { left: 12px; transform: none; }
-  .tl-item.edge-right .tl-tooltip { left: auto; right: 0; transform: none; }
-  .tl-item.edge-right .tl-tooltip::after { left: auto; right: 12px; transform: none; }
-  .tl-tt-title { font-weight: 600; font-size: 11px; margin-bottom: 3px; }
-  .tl-tt-id    { font-size: 10px; opacity: 0.6; margin-bottom: 3px; }
-  .tl-tt-date  { font-size: 10px; opacity: 0.75; }
-  .tl-tt-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; margin-top: 5px; }
-  .tl-tt-badge.s-launched      { background: #107c10; }
-  .tl-tt-badge.s-rollingout    { background: #7a4f00; }
-  .tl-tt-badge.s-preview       { background: #0078d4; }
-  .tl-tt-badge.s-indevelopment { background: #5c2d91; }
-  .tl-tt-badge.s-cancelled     { background: #c50f1f; }
+  /* Connector line from card bottom to axis */
+  .tl-conn {
+    width: 1px;
+    background: #c8c6c4;
+    flex-shrink: 0;
+  }
 
   @media (max-width: 640px) {
     .header-inner { flex-direction: column; }
@@ -149,12 +233,12 @@
 <div class="controls">
   <div class="controls-inner">
     <div class="filter-row">
-      <span class="filter-label">View:</span>
+      <span class="filter-label">Horizon:</span>
       <select class="range-select" id="rangeSelect" onchange="renderAll()">
-        <option value="180">Last 6 months</option>
-        <option value="365" selected>Last year</option>
-        <option value="730">Last 2 years</option>
-        <option value="0">All time</option>
+        <option value="90">Next 3 months</option>
+        <option value="180">Next 6 months</option>
+        <option value="365" selected>Next 12 months</option>
+        <option value="0">All upcoming</option>
       </select>
     </div>
     <div class="filter-row">
@@ -184,8 +268,17 @@
 </div>
 
 <script>
-const DATA_URL = 'https://mc.merill.net/messages-index.json';
+// ── Layout constants (keep in sync with CSS) ──────────────────────
+const TICK_H      = 22;   // px: height of tick-label area below axis line
+const CONN_BASE   = 14;   // px: connector height for row 0
+const CARD_H      = 80;   // px: estimated card height (for row-stacking maths)
+const ROW_GAP     = 10;   // px: vertical gap between stacked card rows
+const TOP_PAD     = 16;   // px: space above the topmost card row
+const OVERLAP_PCT = 13;   // %: cards within this % are stacked into separate rows
 
+const FORWARD_STATUSES = new Set(['In development', 'Preview', 'Rolling out']);
+
+// ── Product config ────────────────────────────────────────────────
 const PRODUCT_RULES = {
   'Copilot': s => { const l = s.toLowerCase(); return (l.includes('copilot') && !l.includes('copilot studio')) || l.includes('microsoft 365 copilot'); },
   'Copilot Studio':     s => s.toLowerCase().includes('copilot studio'),
@@ -195,25 +288,19 @@ const PRODUCT_RULES = {
   'Dynamics 365 Sales': s => { const l = s.toLowerCase(); return l.includes('dynamics 365 sales') || l.includes('dynamics sales') || l.includes('copilot for sales'); },
   'Business Central':   s => s.toLowerCase().includes('business central'),
 };
-
 const PRODUCT_ICONS = {
-  'Copilot': '🤖', 'Copilot Studio': '🧩', 'Power Platform': '⚡',
-  'Power Apps': '📱', 'Power Automate': '🔄', 'Dynamics 365 Sales': '💼', 'Business Central': '📊',
+  'Copilot':'🤖','Copilot Studio':'🧩','Power Platform':'⚡',
+  'Power Apps':'📱','Power Automate':'🔄','Dynamics 365 Sales':'💼','Business Central':'📊',
 };
+// status → CSS class suffix
+const STATUS_SC = { 'Rolling out':'s-rolling', 'Preview':'s-preview', 'In development':'s-dev' };
+const STATUS_BADGE = { 'Rolling out':'↗ Rolling out', 'Preview':'◎ Preview', 'In development':'⚙ In development' };
 
-const STATUS_DOT = {
-  'Launched': 's-launched', 'Rolling out': 's-rollingout', 'Preview': 's-preview',
-  'In development': 's-indevelopment', 'Cancelled': 's-cancelled',
-};
-const STATUS_BADGE_TEXT = {
-  'Launched': '✓ Launched', 'Rolling out': '↗ Rolling out', 'Preview': '◎ Preview',
-  'In development': '⚙ In development', 'Cancelled': '✕ Cancelled',
-};
-
-let allItems = [];
+let allItems    = [];
 let activeProduct = 'All';
 let lastFetchTime = null;
 
+// ── Data loading ──────────────────────────────────────────────────
 async function loadData(forceRefresh = false) {
   const btn = document.getElementById('btnRefresh');
   const icon = document.getElementById('refreshIcon');
@@ -225,7 +312,8 @@ async function loadData(forceRefresh = false) {
     <h3>Fetching roadmap…</h3><p>Loading from mc.merill.net</p>
   </div>`);
   try {
-    const url = forceRefresh ? DATA_URL + '?t=' + Date.now() : DATA_URL;
+    const url = forceRefresh ? 'https://mc.merill.net/messages-index.json?t=' + Date.now()
+                             : 'https://mc.merill.net/messages-index.json';
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -244,22 +332,32 @@ async function loadData(forceRefresh = false) {
   }
 }
 
+// ── Main render ───────────────────────────────────────────────────
 function renderAll() {
-  const days = parseInt(document.getElementById('rangeSelect').value);
-  const cutoff = days > 0 ? new Date(Date.now() - days * 86400000) : null;
+  const days    = parseInt(document.getElementById('rangeSelect').value);
+  const today   = new Date(); today.setHours(0,0,0,0);
+  const horizon = days > 0 ? new Date(today.getTime() + days * 86400000) : null;
 
-  let items = allItems.filter(i => i.Id && i.Id.startsWith('RM'));
+  // RM items only, with products assigned and status computed
+  let items = allItems
+    .filter(i => i.Id && i.Id.startsWith('RM'))
+    .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags || []) }));
 
-  if (cutoff) {
+  // Forward-looking: only active/upcoming statuses
+  items = items.filter(i => FORWARD_STATUSES.has(i._status));
+
+  // Horizon filter: keep items whose StartDateTime falls before the horizon
+  if (horizon) {
     items = items.filter(i => {
-      const d = new Date(i.LastModifiedDateTime || i.StartDateTime);
-      return d >= cutoff;
+      if (!i.StartDateTime) return false;
+      return new Date(i.StartDateTime) <= horizon;
     });
   }
 
-  items = items.map(i => ({ ...i, _products: getProducts(i) }));
+  // Must match at least one tracked product
   items = items.filter(i => i._products.length > 0);
 
+  // Update pill counts before applying product filter
   updatePillCounts(items);
 
   if (activeProduct !== 'All') {
@@ -268,38 +366,38 @@ function renderAll() {
 
   updateStatusBar(items.length);
 
-  if (items.length === 0) {
+  if (!items.length) {
     const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
     setContent(`<div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
-      <h3>No roadmap items found</h3>
-      <p>No items in ${rangeLabel}. Try widening the date range.</p>
+      <h3>No upcoming items found</h3>
+      <p>No roadmap entries for ${rangeLabel}. Try widening the horizon or selecting a different product.</p>
     </div>`);
     return;
   }
 
-  // Build time axis from actual item dates
-  const dates = items.map(i => new Date(i.StartDateTime || i.LastModifiedDateTime)).filter(d => !isNaN(d));
-  if (!dates.length) return;
+  // Time axis: today → latest item date (+ 4% padding)
+  const futureDates = items
+    .map(i => i.StartDateTime ? new Date(i.StartDateTime) : null)
+    .filter(d => d && d >= today);
 
-  const today = new Date();
-  let tMin = new Date(Math.min(...dates, today));
-  let tMax = new Date(Math.max(...dates, today));
-  const span = tMax - tMin || 86400000 * 30;
-  tMin = new Date(tMin - span * 0.04);
-  tMax = new Date(tMax + span * 0.04);
+  let tMax = futureDates.length
+    ? new Date(Math.max(...futureDates))
+    : new Date(today.getTime() + 86400000 * 90);
+  const span = tMax - today || 86400000 * 30;
+  tMax = new Date(tMax.getTime() + span * 0.06);
 
-  renderTimeline(items, tMin, tMax);
+  renderTimeline(items, today, tMax);
 
   const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('headerSub').textContent =
-    `${items.length} roadmap item${items.length !== 1 ? 's' : ''} · ${rangeLabel} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${items.length} upcoming item${items.length !== 1 ? 's' : ''} · ${rangeLabel} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
 }
 
+// ── Timeline renderer ─────────────────────────────────────────────
 function renderTimeline(items, tMin, tMax) {
   const totalMs = tMax - tMin;
-  const todayPct = ((new Date() - tMin) / totalMs * 100).toFixed(2);
-  const ticks = makeTicks(tMin, tMax, totalMs);
+  const ticks   = makeTicks(tMin, tMax, totalMs);
 
   const products = activeProduct === 'All' ? Object.keys(PRODUCT_RULES) : [activeProduct];
   const lanes = products
@@ -311,49 +409,55 @@ function renderTimeline(items, tMin, tMax) {
     return;
   }
 
-  const ticksHtml = ticks.map(t =>
-    `<span class="tl-tick" style="left:${t.pct.toFixed(2)}%">${t.label}</span>`
-  ).join('');
-
   const lanesHtml = lanes.map(({ product, items: li }) => buildLane(product, li, tMin, totalMs)).join('');
 
-  const LEGEND = [
-    ['#107c10','✓ Launched'], ['#7a4f00','↗ Rolling out'], ['#0078d4','◎ Preview'],
-    ['#5c2d91','⚙ In development'], ['#c50f1f','✕ Cancelled'],
+  const LEGEND_ITEMS = [
+    ['var(--c-rolling)', '↗ Rolling out'],
+    ['var(--c-preview)', '◎ Preview'],
+    ['var(--c-dev)',     '⚙ In development'],
   ];
 
   setContent(`
     <div class="legend">
       <span class="filter-label">Status:</span>
-      ${LEGEND.map(([c, l]) => `<span class="legend-item"><span class="legend-dot" style="background:${c}"></span>${l}</span>`).join('')}
-      <span class="legend-item" style="margin-left:4px">
-        <span style="display:inline-block;width:12px;height:2px;background:rgba(196,67,67,0.5);vertical-align:middle;margin-right:3px"></span>Today
+      ${LEGEND_ITEMS.map(([c,l]) =>
+        `<span class="legend-item"><span class="legend-swatch" style="background:${c}"></span>${l}</span>`
+      ).join('')}
+      <span class="legend-item" style="margin-left:6px">
+        <span style="display:inline-block;width:2px;height:12px;background:rgba(196,67,67,0.5);vertical-align:middle;margin-right:4px"></span>Today
       </span>
     </div>
     <div class="tl-outer">
       <div class="tl-scroll">
-        <div class="tl-inner">
-          <div class="tl-axis-row">
-            <div class="tl-axis-spacer">Product</div>
-            <div class="tl-axis-ticks">${ticksHtml}</div>
-          </div>
-          ${lanesHtml}
-        </div>
+        <div class="tl-inner">${lanesHtml}</div>
       </div>
     </div>`);
 
-  // Inject grid lines + today marker into each lane track after render
+  // Inject axis lines, grid lines, tick labels, today marker and axis dots after render
   requestAnimationFrame(() => {
     document.querySelectorAll('.tl-lane-track').forEach((track, idx) => {
+      // Horizontal axis line
+      const axLine = document.createElement('div');
+      axLine.className = 'tl-axis-line';
+      track.appendChild(axLine);
+
+      // Vertical grid lines + tick labels
       ticks.forEach(t => {
         const gl = document.createElement('div');
         gl.className = 'tl-grid-line';
         gl.style.left = t.pct.toFixed(2) + '%';
         track.appendChild(gl);
+
+        const tl = document.createElement('span');
+        tl.className = 'tl-tick';
+        tl.style.left = t.pct.toFixed(2) + '%';
+        tl.textContent = t.label;
+        track.appendChild(tl);
       });
+
+      // Today marker (left edge = today)
       const todayEl = document.createElement('div');
       todayEl.className = 'tl-today-line';
-      todayEl.style.left = todayPct + '%';
       if (idx === 0) {
         const lbl = document.createElement('div');
         lbl.className = 'tl-today-label';
@@ -361,68 +465,75 @@ function renderTimeline(items, tMin, tMax) {
         todayEl.appendChild(lbl);
       }
       track.appendChild(todayEl);
+
+      // Colored axis dot for each item
+      track.querySelectorAll('.tl-item[data-x][data-sc]').forEach(itemEl => {
+        const dot = document.createElement('div');
+        dot.className = 'tl-axis-dot ' + itemEl.dataset.sc;
+        dot.style.left = itemEl.dataset.x + '%';
+        track.appendChild(dot);
+      });
     });
   });
 }
 
+// ── Lane builder ──────────────────────────────────────────────────
 function buildLane(product, items, tMin, totalMs) {
-  const icon = PRODUCT_ICONS[product] || '📌';
+  const icon     = PRODUCT_ICONS[product] || '📌';
   const isFocused = activeProduct === product;
-  const OVERLAP_PCT = 2.5;
-  const ROW_H = isFocused ? 32 : 22;
-  const PAD_TOP = 12;
+  const today    = tMin; // tMin = today
 
+  // Compute x position for each item; clamp past items to left edge
   const positioned = items.map(item => {
-    const d = new Date(item.StartDateTime || item.LastModifiedDateTime);
-    const x = isNaN(d) ? 50 : Math.max(0.5, Math.min(99.5, (d - tMin) / totalMs * 100));
-    return { item, x, status: getPrimaryStatus(item.Tags || []) };
+    const d   = item.StartDateTime ? new Date(item.StartDateTime) : today;
+    const raw = (d - tMin) / totalMs * 100;
+    const x   = Math.max(0.5, Math.min(99.5, raw));
+    return { item, x, sc: STATUS_SC[item._status] || 's-dev' };
   }).sort((a, b) => a.x - b.x);
 
-  // Anti-collision: assign rows
-  const rowMax = [];
+  // Greedy row assignment to avoid card overlap
+  const rowEnds = [];
   for (const p of positioned) {
     let row = 0;
-    while (rowMax[row] !== undefined && p.x - rowMax[row] < OVERLAP_PCT) row++;
-    rowMax[row] = p.x;
+    while (rowEnds[row] !== undefined && p.x - rowEnds[row] < OVERLAP_PCT) row++;
+    rowEnds[row] = p.x;
     p.row = row;
   }
 
-  const maxRow = Math.max(0, ...positioned.map(p => p.row));
-  const trackH = PAD_TOP + (maxRow + 1) * ROW_H + 14 + (isFocused ? 16 : 0);
+  const maxRow  = Math.max(0, ...positioned.map(p => p.row));
+  const trackH  = TICK_H + CONN_BASE + maxRow * (CARD_H + ROW_GAP) + CARD_H + TOP_PAD;
 
-  const itemsHtml = positioned.map(({ item, x, status, row }) => {
-    const dot = STATUS_DOT[status] || 's-unknown';
-    const badge = STATUS_BADGE_TEXT[status] || status;
-    const id = item.Id || '';
+  const itemsHtml = positioned.map(({ item, x, sc, row }) => {
+    const connH = CONN_BASE + row * (CARD_H + ROW_GAP);
+    const id    = item.Id || '';
     const title = item.Title || 'Untitled';
-    const date = formatDate(item.StartDateTime || item.LastModifiedDateTime);
-    const url = item.Url || `https://mc.merill.net/message/${id}`;
-    const top = PAD_TOP + row * ROW_H;
-    const edgeClass = x < 14 ? ' edge-left' : x > 86 ? ' edge-right' : '';
+    const date  = formatDate(item.StartDateTime);
+    const url   = item.Url || `https://mc.merill.net/message/${id}`;
+    const badge = STATUS_BADGE[item._status] || item._status;
 
-    return `<a class="tl-item${edgeClass}" href="${esc(url)}" target="_blank" style="left:${x.toFixed(2)}%;top:${top}px">
-        <div class="tl-dot ${dot}"></div>
-        <div class="tl-item-label">${esc(title.length > 16 ? title.slice(0,15) + '…' : title)}</div>
-        <div class="tl-tooltip">
-          <div class="tl-tt-title">${esc(title.length > 68 ? title.slice(0,67) + '…' : title)}</div>
-          <div class="tl-tt-id">${esc(id)}</div>
-          ${date ? `<div class="tl-tt-date">📅 ${esc(date)}</div>` : ''}
-          <span class="tl-tt-badge ${dot}">${badge}</span>
-        </div>
-      </a>`;
+    return `<div class="tl-item" style="left:${x.toFixed(2)}%;bottom:${TICK_H}px"
+         data-x="${x.toFixed(2)}" data-sc="${sc}">
+      <a class="tl-card ${sc}" href="${esc(url)}" target="_blank">
+        <div class="tl-card-title">${esc(title)}</div>
+        <span class="tl-card-badge ${sc}">${badge}</span>
+        ${date ? `<div class="tl-card-date">📅 ${esc(date)}</div>` : ''}
+      </a>
+      <div class="tl-conn" style="height:${connH}px"></div>
+    </div>`;
   }).join('');
 
   return `<div class="tl-lane${isFocused ? ' focused' : ''}">
-      <div class="tl-lane-label">${icon} ${esc(product)}</div>
-      <div class="tl-lane-track" style="height:${trackH}px">${itemsHtml}</div>
-    </div>`;
+    <div class="tl-lane-label">${icon} ${esc(product)}</div>
+    <div class="tl-lane-track" style="height:${trackH}px">${itemsHtml}</div>
+  </div>`;
 }
 
+// ── Tick generator ────────────────────────────────────────────────
 function makeTicks(tMin, tMax, totalMs) {
-  const totalDays = totalMs / 86400000;
-  const isQuarterly = totalDays > 500;
-  const fmt = { month: 'short', year: '2-digit' };
-  const ticks = [];
+  const days        = totalMs / 86400000;
+  const isQuarterly = days > 400;
+  const fmt         = { month: 'short', year: '2-digit' };
+  const ticks       = [];
 
   const d = new Date(tMin);
   d.setDate(1);
@@ -439,10 +550,10 @@ function makeTicks(tMin, tMax, totalMs) {
   return ticks;
 }
 
+// ── Helpers ───────────────────────────────────────────────────────
 function getPrimaryStatus(tags) {
-  for (const s of ['Rolling out', 'Preview', 'In development', 'Launched', 'Cancelled']) {
+  for (const s of ['Rolling out', 'Preview', 'In development', 'Launched', 'Cancelled'])
     if (tags.includes(s)) return s;
-  }
   return 'Unknown';
 }
 
@@ -470,14 +581,14 @@ function updateStatusBar(count) {
   document.getElementById('statusBar').style.display = 'flex';
   const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('statusText').innerHTML =
-    `Showing <strong>${count}</strong> item${count !== 1 ? 's' : ''}` +
+    `Showing <strong>${count}</strong> upcoming item${count !== 1 ? 's' : ''}` +
     (activeProduct !== 'All' ? ` for <strong>${activeProduct}</strong>` : '') +
     ` · ${rangeLabel}`;
 }
 
 function setContent(html) { document.getElementById('content').innerHTML = html; }
-function showError(msg) { const el = document.getElementById('errorBanner'); el.innerHTML = '⚠ ' + msg; el.style.display = 'block'; }
-function hideError() { document.getElementById('errorBanner').style.display = 'none'; }
+function showError(msg)    { const el = document.getElementById('errorBanner'); el.innerHTML = '⚠ ' + msg; el.style.display = 'block'; }
+function hideError()       { document.getElementById('errorBanner').style.display = 'none'; }
 
 function formatDate(iso) {
   if (!iso) return '';
