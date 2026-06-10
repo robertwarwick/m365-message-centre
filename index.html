@@ -8,14 +8,14 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --ms-blue: #0078d4;
-    --ms-blue-light: #e6f2fb;
-    --ms-green: #107c10;
-    --ms-green-light: #e8f5e9;
+    --ms-blue: #00864F;
+    --ms-blue-light: #E6F5EE;
+    --ms-green: #005C35;
+    --ms-green-light: #C8E8D8;
     --ms-orange: #ff8c00;
     --ms-grey: #605e5c;
     --ms-grey-light: #f3f2f1;
-    --ms-text: #11100f;
+    --ms-text: #231F20;
     --ms-text-muted: #605e5c;
     --ms-border: #edebe9;
     --card-bg: #ffffff;
@@ -33,7 +33,7 @@
 
   /* ── NAV ── */
   .topnav {
-    background: #1a1a2e;
+    background: #231F20;
     display: flex;
     align-items: center;
     padding: 0 24px;
@@ -59,7 +59,7 @@
     border-bottom: 2px solid transparent;
   }
   .topnav a:hover { color: white; }
-  .topnav a.active { color: white; border-bottom-color: #6fc3f7; }
+  .topnav a.active { color: white; border-bottom-color: #00864F; }
 
   /* ── HEADER ── */
   .header {
@@ -182,7 +182,7 @@
   }
   .pill:hover { border-color: var(--ms-blue); color: var(--ms-blue); }
   .pill.active { background: var(--ms-blue); border-color: var(--ms-blue); color: white; }
-  .pill.active:hover { background: #106ebe; }
+  .pill.active:hover { background: #006640; }
   .pill-count {
     font-size: 10px;
     font-weight: 600;
@@ -253,7 +253,7 @@
     margin-bottom: 10px;
     transition: box-shadow 0.15s;
   }
-  .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,120,212,0.15); }
+  .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,134,79,0.15); }
 
   .card-header {
     display: flex;
@@ -286,9 +286,9 @@
   .badge-updated { background: var(--ms-grey); color: white; }
   .badge-major { background: #c50f1f; color: white; }
   .badge-launched { background: var(--ms-green); color: white; }
-  .badge-preview { background: var(--ms-blue-light); color: var(--ms-blue); border: 1px solid #b3d6f5; }
+  .badge-preview { background: #e6f2fb; color: #0078d4; border: 1px solid #b3d6f5; }
   .badge-rolling { background: #fff4ce; color: #7a4f00; border: 1px solid #f5d978; }
-  .badge-dev { background: #f3f0ff; color: #5c2d91; border: 1px solid #d2c4f0; }
+  .badge-dev { background: #E6F5EE; color: #00864F; border: 1px solid #9DD4B8; }
   .badge-cancelled { background: #fde7e9; color: #c50f1f; border: 1px solid #f4abab; }
 
   .card-meta {
