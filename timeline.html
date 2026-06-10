@@ -254,7 +254,7 @@
 <div class="controls">
   <div class="controls-inner">
     <div class="filter-row">
-      <span class="filter-label">Updated in last:</span>
+      <span class="filter-label">GA within:</span>
       <select class="range-select" id="rangeSelect" onchange="renderAll()">
         <option value="7">1 week</option>
         <option value="14">2 weeks</option>
@@ -285,7 +285,7 @@
     <div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
       <h3>Loading…</h3>
-      <p>Fetching roadmap from mc.merill.net</p>
+      <p>Fetching roadmap from Microsoft</p>
     </div>
   </div>
 </div>
@@ -318,6 +318,53 @@ const PRODUCT_ICONS = { 'Copilot':'🤖','Copilot Studio':'🧩','Power Platform
 const STATUS_SC    = { 'Rolling out':'s-rolling','Preview':'s-preview','In development':'s-dev' };
 const STATUS_BADGE = { 'Rolling out':'↗ Rolling out','Preview':'◎ Preview','In development':'⚙ In development' };
 
+const RSS_URL = 'https://www.microsoft.com/releasecommunications/api/v2/m365/rss';
+
+const MONTH_MAP = {
+  january:1,february:2,march:3,april:4,may:5,june:6,
+  july:7,august:8,september:9,october:10,november:11,december:12,
+  jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12
+};
+function parseCYDate(str) {
+  if (!str) return null;
+  const mM = str.match(/^([A-Za-z]+)\s+CY(\d{4})$/i);
+  if (mM) { const m = MONTH_MAP[mM[1].toLowerCase()]; if (m) return new Date(parseInt(mM[2]),m-1,1); }
+  const qM = str.match(/^Q([1-4])\s+CY(\d{4})$/i);
+  if (qM) return new Date(parseInt(qM[2]),[3,6,9,12][parseInt(qM[1])-1]-1,1);
+  const hM = str.match(/^H([12])\s+CY(\d{4})$/i);
+  if (hM) return new Date(parseInt(hM[2]),hM[1]==='1'?5:11,1);
+  const yM = str.match(/CY(\d{4})/i);
+  if (yM) return new Date(parseInt(yM[1]),11,1);
+  return null;
+}
+function parseDescription(raw) {
+  const text = raw.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+                   .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').trim();
+  const gM = text.match(/GA date:\s*(.+?)(?:\n|$)/i);
+  const gaDate = gM ? parseCYDate(gM[1].trim()) : null;
+  const summary = text.replace(/\n?GA date:.+$/im,'').trim();
+  return { summary, gaDate };
+}
+function parseRSSItem(node) {
+  const getText = sel => node.querySelector(sel)?.textContent?.trim() || '';
+  const categories = [...node.querySelectorAll('category')].map(c => c.textContent.trim());
+  const { summary, gaDate } = parseDescription(getText('description'));
+  let lastMod = '';
+  for (const el of node.getElementsByTagName('*')) { if (el.localName==='updated') { lastMod=el.textContent.trim(); break; } }
+  return {
+    Id: 'RM' + getText('guid'),
+    Title: getText('title'),
+    Summary: summary,
+    Tags: categories,
+    Services: categories,
+    Url: getText('link'),
+    StartDateTime: getText('pubDate') ? new Date(getText('pubDate')).toISOString() : '',
+    LastModifiedDateTime: lastMod,
+    IsMajorChange: false,
+    _gaDate: gaDate,
+  };
+}
+
 let allItems = [], activeProduct = 'All', lastFetchTime = null;
 
 // ── Data ──────────────────────────────────────────────────────────
@@ -327,13 +374,15 @@ async function loadData(forceRefresh = false) {
   btn.disabled = true; icon.classList.add('spin'); hideError();
   setContent(`<div class="state-msg">
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-    <h3>Fetching roadmap…</h3><p>Loading from mc.merill.net</p></div>`);
+    <h3>Fetching roadmap…</h3><p>Loading from Microsoft</p></div>`);
   try {
-    const url = forceRefresh ? 'https://mc.merill.net/messages-index.json?t='+Date.now() : 'https://mc.merill.net/messages-index.json';
+    const url = RSS_URL + (forceRefresh ? '?t='+Date.now() : '');
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    allItems = Array.isArray(data) ? data : (data.items||data.messages||[]);
+    const text = await res.text();
+    const xml = new DOMParser().parseFromString(text, 'application/xml');
+    if (xml.querySelector('parsererror')) throw new Error('XML parse error');
+    allItems = [...xml.querySelectorAll('item')].map(parseRSSItem);
     lastFetchTime = new Date();
     renderAll();
   } catch(e) {
@@ -346,17 +395,15 @@ async function loadData(forceRefresh = false) {
 
 // ── Main render ───────────────────────────────────────────────────
 function renderAll() {
-  const days   = parseInt(document.getElementById('rangeSelect').value);
-  const today  = new Date(); today.setHours(0,0,0,0);
-  const cutoff = new Date(today.getTime() - days*86400000); // look back N days
+  const days    = parseInt(document.getElementById('rangeSelect').value);
+  const today   = new Date(); today.setHours(0,0,0,0);
+  const horizon = new Date(today.getTime() + days*86400000);
 
   let items = allItems
     .filter(i => i.Id && i.Id.startsWith('RM'))
     .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags||[]) }))
-    // Forward-status items heading towards GA (not yet launched/cancelled)
-    .filter(i => FORWARD_STATUSES.has(i._status) && (i.LastModifiedDateTime || i.StartDateTime))
-    // Only items updated within the selected window
-    .filter(i => new Date(i.LastModifiedDateTime || i.StartDateTime) >= cutoff);
+    .filter(i => FORWARD_STATUSES.has(i._status) && i._gaDate)
+    .filter(i => i._gaDate >= today && i._gaDate <= horizon);
 
   items = items.filter(i => i._products.length > 0);
 
@@ -372,22 +419,21 @@ function renderAll() {
     const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
     setContent(`<div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
-      <h3>No items found</h3><p>No active roadmap items updated in the last ${rl}.</p></div>`);
+      <h3>No items found</h3><p>No roadmap items with General Availability planned within the next ${rl}.</p></div>`);
     return;
   }
 
-  // Axis: cutoff (left) → today (right), items positioned by LastModifiedDateTime
-  const modDates = items.map(i => new Date(i.LastModifiedDateTime || i.StartDateTime));
-  const earliest = new Date(Math.min(...modDates));
-  const span  = today - earliest || 86400000*30;
-  const tMin  = new Date(earliest.getTime() - span*0.04);
-  const tMax  = new Date(today.getTime()    + span*0.03);
+  // Axis: today (left) → beyond furthest GA date (right)
+  const latestGA = new Date(Math.max(...items.map(i => i._gaDate)));
+  const span = latestGA - today || 86400000*30;
+  const tMin = new Date(today.getTime()    - span*0.03);
+  const tMax = new Date(latestGA.getTime() + span*0.05);
 
   renderTimeline(items, tMin, tMax, today);
 
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('headerSub').textContent =
-    `${items.length} active roadmap item${items.length!==1?'s':''} · updated in last ${rl} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${items.length} roadmap item${items.length!==1?'s':''} going GA within ${rl} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
 }
 
 // ── Timeline renderer ─────────────────────────────────────────────
@@ -472,9 +518,9 @@ function buildLane(product, items, tMin, totalMs) {
   const icon = PRODUCT_ICONS[product] || '📌';
   const isFocused = activeProduct === product;
 
-  // Position each item on the 0–100% axis
+  // Position each item on the 0–100% axis by GA date
   const placed = items.map(item => {
-    const d = item.StartDateTime ? new Date(item.StartDateTime) : tMin;
+    const d = item._gaDate || tMin;
     const x = Math.max(0.5, Math.min(99.5, (d-tMin)/totalMs*100));
     return { item, x, sc: STATUS_SC[item._status]||'s-dev' };
   }).sort((a,b) => a.x - b.x);
@@ -504,8 +550,8 @@ function buildLane(product, items, tMin, totalMs) {
   for (const { item, x, sc, side, row } of placed) {
     const id    = item.Id || '';
     const title = item.Title || 'Untitled';
-    const date  = formatDate(item.LastModifiedDateTime || item.StartDateTime);
-    const url   = item.Url || `https://mc.merill.net/message/${id}`;
+    const date  = item._gaDate ? item._gaDate.toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : '';
+    const url   = item.Url || `https://www.microsoft.com/microsoft-365/roadmap?id=${id.replace('RM','')}`;
     const badge = STATUS_BADGE[item._status] || item._status;
 
     let cardTop, connTop, connHeight;
@@ -529,7 +575,7 @@ function buildLane(product, items, tMin, totalMs) {
          onmouseenter="tipShow('${esc(id)}',event)" onmouseleave="tipHide()">
         <div class="tl-card-title">${esc(title)}</div>
         <span class="tl-card-badge">${badge}</span>
-        ${date ? `<div class="tl-card-date">Updated: ${esc(date)}</div>` : ''}
+        ${date ? `<div class="tl-card-date">GA: ${esc(date)}</div>` : ''}
       </a>
       <div class="tl-connector" style="left:${x.toFixed(2)}%;top:${connTop}px;height:${connHeight}px"></div>`;
   }
@@ -584,9 +630,9 @@ function updateStatusBar(count) {
   document.getElementById('statusBar').style.display = 'flex';
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('statusText').innerHTML =
-    `Showing <strong>${count}</strong> active roadmap item${count!==1?'s':''}` +
+    `Showing <strong>${count}</strong> roadmap item${count!==1?'s':''}` +
     (activeProduct!=='All' ? ` for <strong>${activeProduct}</strong>` : '') +
-    ` · updated in last ${rl}`;
+    ` · GA within ${rl}`;
 }
 function setContent(h) { document.getElementById('content').innerHTML = h; }
 function showError(m)  { const el=document.getElementById('errorBanner'); el.innerHTML='⚠ '+m; el.style.display='block'; }
@@ -611,7 +657,7 @@ function tipShow(id, ev) {
   const tip = document.getElementById('tl-tooltip');
   const sc    = STATUS_SC[item._status] || 's-dev';
   const badge = STATUS_BADGE[item._status] || item._status;
-  const date  = formatDate(item.StartDateTime);
+  const date  = item._gaDate ? item._gaDate.toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : '';
   const mod   = formatDate(item.LastModifiedDateTime);
   const prods = (item._products || []).join(', ');
   const svcs  = (item.Services || []).join(', ');
@@ -624,7 +670,7 @@ function tipShow(id, ev) {
   html += `<div class="tl-tip-meta">`;
   if (prods)  html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Products:</span><span>${esc(prods)}</span></div>`;
   if (svcs)   html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Services:</span><span>${esc(svcs)}</span></div>`;
-  if (date)   html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Date:</span><span>${esc(date)}</span></div>`;
+  if (date)   html += `<div class="tl-tip-row"><span class="tl-tip-lbl">GA date:</span><span>${esc(date)}</span></div>`;
   if (mod)    html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Updated:</span><span>${esc(mod)}</span></div>`;
   html += `</div>`;
   if (extraTags.length) {
