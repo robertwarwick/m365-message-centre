@@ -301,9 +301,15 @@ function renderAll() {
     .filter(i => FORWARD_STATUSES.has(i._status))
     .filter(i => i.StartDateTime);
 
-  // Horizon limits how far forward we look; past items are always included
+  // Show only items whose StartDateTime falls between today and the horizon
+  // (items with past dates have already been superseded by the current status date)
   if (horizon) {
-    items = items.filter(i => new Date(i.StartDateTime) <= horizon);
+    items = items.filter(i => {
+      const d = new Date(i.StartDateTime);
+      return d >= today && d <= horizon;
+    });
+  } else {
+    items = items.filter(i => new Date(i.StartDateTime) >= today);
   }
   items = items.filter(i => i._products.length > 0);
 
