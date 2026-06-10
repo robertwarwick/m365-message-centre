@@ -297,8 +297,9 @@ function renderAll() {
     .filter(i => i.Id && i.Id.startsWith('RM'))
     .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags||[]) }))
     .filter(i => FORWARD_STATUSES.has(i._status))
-    .filter(i => i.StartDateTime && new Date(i.StartDateTime) >= today); // GA date must be in the future
+    .filter(i => i.StartDateTime);
 
+  // Horizon limits how far forward we look; past items are always included
   if (horizon) {
     items = items.filter(i => new Date(i.StartDateTime) <= horizon);
   }
@@ -317,13 +318,15 @@ function renderAll() {
     return;
   }
 
-  // Axis spans today → latest GA date (all items guaranteed to have future StartDateTime)
-  const futureDates = items.map(i => new Date(i.StartDateTime));
-  let tMax = futureDates.length ? new Date(Math.max(...futureDates)) : new Date(today.getTime()+86400000*90);
-  const span = tMax - today || 86400000*30;
+  // Axis spans from earliest item date to latest, with today marked wherever it falls
+  const allDates = items.map(i => new Date(i.StartDateTime));
+  let tMin = new Date(Math.min(...allDates));
+  let tMax = new Date(Math.max(...allDates));
+  const span = tMax - tMin || 86400000*30;
+  tMin = new Date(tMin.getTime() - span*0.04);
   tMax = new Date(tMax.getTime() + span*0.06);
 
-  renderTimeline(items, today, tMax);
+  renderTimeline(items, tMin, tMax, today);
 
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('headerSub').textContent =
@@ -331,8 +334,9 @@ function renderAll() {
 }
 
 // ── Timeline renderer ─────────────────────────────────────────────
-function renderTimeline(items, tMin, tMax) {
-  const totalMs = tMax - tMin;
+function renderTimeline(items, tMin, tMax, today) {
+  const totalMs  = tMax - tMin;
+  const todayPct = Math.max(0, Math.min(100, (today - tMin) / totalMs * 100));
   const ticks   = makeTicks(tMin, tMax, totalMs);
   const products = activeProduct === 'All' ? Object.keys(PRODUCT_RULES) : [activeProduct];
   const lanes = products
@@ -382,10 +386,10 @@ function renderTimeline(items, tMin, tMax) {
         track.appendChild(gl);
       });
 
-      // Today line (left edge = today = tMin)
+      // Today line at its actual position on the axis
       const todayEl = document.createElement('div');
       todayEl.className = 'tl-today';
-      todayEl.style.left = '0%';
+      todayEl.style.left = todayPct.toFixed(2) + '%';
       if (idx === 0) {
         const lbl = document.createElement('div');
         lbl.className = 'tl-today-lbl';
@@ -467,7 +471,7 @@ function buildLane(product, items, tMin, totalMs) {
          data-x="${x.toFixed(2)}" data-sc="${sc}">
         <div class="tl-card-title">${esc(title)}</div>
         <span class="tl-card-badge">${badge}</span>
-        ${date ? `<div class="tl-card-date">GA: ${esc(date)}</div>` : ''}
+        ${date ? `<div class="tl-card-date">📅 ${esc(date)}</div>` : ''}
       </a>
       <div class="tl-connector" style="left:${x.toFixed(2)}%;top:${connTop}px;height:${connHeight}px"></div>`;
   }
