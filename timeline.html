@@ -254,7 +254,7 @@
 <div class="controls">
   <div class="controls-inner">
     <div class="filter-row">
-      <span class="filter-label">GA within:</span>
+      <span class="filter-label">Updated in last:</span>
       <select class="range-select" id="rangeSelect" onchange="renderAll()">
         <option value="7">1 week</option>
         <option value="14">2 weeks</option>
@@ -346,41 +346,17 @@ async function loadData(forceRefresh = false) {
 
 // ── Main render ───────────────────────────────────────────────────
 function renderAll() {
-  const days    = parseInt(document.getElementById('rangeSelect').value);
-  const today   = new Date(); today.setHours(0,0,0,0);
-  const horizon = new Date(today.getTime() + days*86400000);
+  const days   = parseInt(document.getElementById('rangeSelect').value);
+  const today  = new Date(); today.setHours(0,0,0,0);
+  const cutoff = new Date(today.getTime() - days*86400000); // look back N days
 
-  const rmAll = allItems.filter(i => i.Id && i.Id.startsWith('RM'));
-
-  // Diagnostic logging – helps trace why items may not appear
-  if (rmAll.length > 0) {
-    const allTags   = [...new Set(rmAll.flatMap(i => i.Tags||[]))].sort();
-    const gaTagged  = rmAll.filter(i => (i.Tags||[]).some(t => t.toLowerCase().includes('general availability')));
-    const fwdGA     = gaTagged.filter(i => i.StartDateTime && new Date(i.StartDateTime) >= today);
-    console.group('Timeline diagnostics');
-    console.log('Total RM items:', rmAll.length);
-    console.log('All unique tags:', allTags);
-    console.log('Items with General Availability tag:', gaTagged.length);
-    console.log('GA items with future StartDateTime:', fwdGA.length);
-    if (gaTagged.length) {
-      const dates = gaTagged.map(i => i.StartDateTime).filter(Boolean).sort();
-      console.log('GA item date range:', dates[0], '→', dates[dates.length-1]);
-      console.log('Sample GA item:', gaTagged[0]);
-    }
-    console.groupEnd();
-  }
-
-  let items = rmAll
+  let items = allItems
+    .filter(i => i.Id && i.Id.startsWith('RM'))
     .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags||[]) }))
-    // Case-insensitive GA tag match, not yet launched
-    .filter(i => (i.Tags||[]).some(t => t.toLowerCase().includes('general availability')) &&
-                 i._status !== 'Launched' && i._status !== 'Cancelled' &&
-                 i.StartDateTime)
-    // GA date must be in the future and within the selected window
-    .filter(i => {
-      const ga = new Date(i.StartDateTime);
-      return ga >= today && ga <= horizon;
-    });
+    // Forward-status items heading towards GA (not yet launched/cancelled)
+    .filter(i => FORWARD_STATUSES.has(i._status) && (i.LastModifiedDateTime || i.StartDateTime))
+    // Only items updated within the selected window
+    .filter(i => new Date(i.LastModifiedDateTime || i.StartDateTime) >= cutoff);
 
   items = items.filter(i => i._products.length > 0);
 
@@ -394,39 +370,24 @@ function renderAll() {
 
   if (!items.length) {
     const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
-    // Build a diagnostic summary to display in the UI
-    const rmCount  = rmAll.length;
-    const gaCount  = rmAll.filter(i => (i.Tags||[]).some(t => t.toLowerCase().includes('general availability'))).length;
-    const fwdCount = rmAll.filter(i =>
-      (i.Tags||[]).some(t => t.toLowerCase().includes('general availability')) &&
-      i.StartDateTime && new Date(i.StartDateTime) >= today
-    ).length;
-    const diagHtml = rmCount
-      ? `<p style="font-size:11px;margin-top:8px;color:#888">
-           Loaded ${rmCount} roadmap items &nbsp;·&nbsp;
-           ${gaCount} have a GA tag &nbsp;·&nbsp;
-           ${fwdCount} of those have a future planned date
-           — try opening the browser console (F12) for more detail.
-         </p>`
-      : '';
     setContent(`<div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
-      <h3>No items found</h3><p>No items with General Availability planned within ${rl}.</p>${diagHtml}</div>`);
+      <h3>No items found</h3><p>No active roadmap items updated in the last ${rl}.</p></div>`);
     return;
   }
 
-  // Axis spans today → horizon, with a small right-side padding
-  const gaMax = new Date(Math.max(...items.map(i => new Date(i.StartDateTime))));
-  let tMax = gaMax;
-  const span = tMax - today || 86400000*30;
-  const tMin = new Date(today.getTime() - span*0.04);
-  tMax = new Date(tMax.getTime() + span*0.06);
+  // Axis: cutoff (left) → today (right), items positioned by LastModifiedDateTime
+  const modDates = items.map(i => new Date(i.LastModifiedDateTime || i.StartDateTime));
+  const earliest = new Date(Math.min(...modDates));
+  const span  = today - earliest || 86400000*30;
+  const tMin  = new Date(earliest.getTime() - span*0.04);
+  const tMax  = new Date(today.getTime()    + span*0.03);
 
   renderTimeline(items, tMin, tMax, today);
 
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('headerSub').textContent =
-    `${items.length} item${items.length!==1?'s':''} going GA within ${rl} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${items.length} active roadmap item${items.length!==1?'s':''} · updated in last ${rl} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
 }
 
 // ── Timeline renderer ─────────────────────────────────────────────
@@ -543,7 +504,7 @@ function buildLane(product, items, tMin, totalMs) {
   for (const { item, x, sc, side, row } of placed) {
     const id    = item.Id || '';
     const title = item.Title || 'Untitled';
-    const date  = formatDate(item.StartDateTime);
+    const date  = formatDate(item.LastModifiedDateTime || item.StartDateTime);
     const url   = item.Url || `https://mc.merill.net/message/${id}`;
     const badge = STATUS_BADGE[item._status] || item._status;
 
@@ -568,7 +529,7 @@ function buildLane(product, items, tMin, totalMs) {
          onmouseenter="tipShow('${esc(id)}',event)" onmouseleave="tipHide()">
         <div class="tl-card-title">${esc(title)}</div>
         <span class="tl-card-badge">${badge}</span>
-        ${date ? `<div class="tl-card-date">GA: ${esc(date)}</div>` : ''}
+        ${date ? `<div class="tl-card-date">Updated: ${esc(date)}</div>` : ''}
       </a>
       <div class="tl-connector" style="left:${x.toFixed(2)}%;top:${connTop}px;height:${connHeight}px"></div>`;
   }
@@ -623,8 +584,9 @@ function updateStatusBar(count) {
   document.getElementById('statusBar').style.display = 'flex';
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('statusText').innerHTML =
-    `Showing <strong>${count}</strong> item${count!==1?'s':''} going GA within ${rl}` +
-    (activeProduct!=='All' ? ` for <strong>${activeProduct}</strong>` : '');
+    `Showing <strong>${count}</strong> active roadmap item${count!==1?'s':''}` +
+    (activeProduct!=='All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    ` · updated in last ${rl}`;
 }
 function setContent(h) { document.getElementById('content').innerHTML = h; }
 function showError(m)  { const el=document.getElementById('errorBanner'); el.innerHTML='⚠ '+m; el.style.display='block'; }
