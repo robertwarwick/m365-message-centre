@@ -140,7 +140,7 @@
   .filter-label { font-size: 12px; color: var(--ms-text-muted); font-weight: 500; margin-right: 2px; }
 
   .pill {
-    padding: 4px 12px;
+    padding: 5px 12px 4px;
     border-radius: 16px;
     border: 1px solid #c8c6c4;
     font-size: 12px;
@@ -150,10 +150,21 @@
     font-family: inherit;
     transition: all 0.15s;
     white-space: nowrap;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
   }
   .pill:hover { border-color: var(--ms-purple); color: var(--ms-purple); }
   .pill.active { background: var(--ms-purple); border-color: var(--ms-purple); color: white; }
   .pill.active:hover { background: #4b0082; }
+  .pill-count {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    opacity: 0.6;
+  }
+  .pill.active .pill-count { opacity: 0.85; }
 
   /* Status filter pills */
   .status-pill {
@@ -432,14 +443,14 @@
     </div>
     <div class="filter-row">
       <span class="filter-label">Product:</span>
-      <button class="pill active" data-product="All" onclick="setProduct('All')">All</button>
-      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot</button>
-      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio</button>
-      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform</button>
-      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps</button>
-      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate</button>
-      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales</button>
-      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central</button>
+      <button class="pill active" data-product="All" onclick="setProduct('All')">All<span class="pill-count"></span></button>
+      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot<span class="pill-count"></span></button>
+      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio<span class="pill-count"></span></button>
+      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform<span class="pill-count"></span></button>
+      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps<span class="pill-count"></span></button>
+      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate<span class="pill-count"></span></button>
+      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales<span class="pill-count"></span></button>
+      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central<span class="pill-count"></span></button>
     </div>
     <div class="filter-row">
       <span class="filter-label">Status:</span>
@@ -557,11 +568,6 @@ function renderAll() {
   // Keep only target-product items
   items = items.filter(item => item._products.length > 0);
 
-  // Product filter
-  if (activeProduct !== 'All') {
-    items = items.filter(item => item._products.includes(activeProduct));
-  }
-
   // Status filter
   if (activeStatus !== 'All') {
     items = items.filter(item => (item.Tags || []).includes(activeStatus));
@@ -575,6 +581,14 @@ function renderAll() {
       (item.Id || '').toLowerCase().includes(query) ||
       (item.Services || []).some(s => s.toLowerCase().includes(query))
     );
+  }
+
+  // Update pill counts (after date + status + search, before product filter)
+  updatePillCounts(items);
+
+  // Product filter
+  if (activeProduct !== 'All') {
+    items = items.filter(item => item._products.includes(activeProduct));
   }
 
   // Sort: In development / Rolling out first, then by date desc
@@ -627,6 +641,17 @@ function getProducts(item) {
   return Object.entries(PRODUCT_RULES)
     .filter(([, fn]) => combined.some(s => fn(s)))
     .map(([p]) => p);
+}
+
+function updatePillCounts(items) {
+  document.querySelectorAll('.pill[data-product]').forEach(pill => {
+    const product = pill.dataset.product;
+    const countEl = pill.querySelector('.pill-count');
+    if (!countEl) return;
+    countEl.textContent = product === 'All'
+      ? items.length
+      : items.filter(i => i._products.includes(product)).length;
+  });
 }
 
 function renderSection(product, items, query) {
