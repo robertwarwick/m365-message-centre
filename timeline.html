@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M365 Roadmap Timeline</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ms-purple: #5c2d91;
+    --ms-purple-light: #f3f0ff;
+    --ms-text: #11100f;
+    --ms-text-muted: #605e5c;
+    --ms-border: #edebe9;
+    --page-bg: #f3f2f1;
+  }
+  body { font-family: 'Segoe UI', SegoeUI, Roboto, 'Helvetica Neue', Arial, sans-serif; background: var(--page-bg); color: var(--ms-text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+
+  /* NAV */
+  .topnav { background: #1a1a2e; display: flex; align-items: center; padding: 0 24px; }
+  .topnav-brand { color: white; font-size: 13px; font-weight: 600; padding: 10px 16px 10px 0; margin-right: 8px; border-right: 1px solid rgba(255,255,255,0.15); white-space: nowrap; text-decoration: none; }
+  .topnav a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 13px; padding: 10px 14px; display: inline-block; transition: color 0.15s; border-bottom: 2px solid transparent; }
+  .topnav a:hover { color: white; }
+  .topnav a.active { color: white; border-bottom-color: #a88bff; }
+
+  /* HEADER */
+  .header { background: var(--ms-purple); color: white; padding: 20px 24px 16px; }
+  .header-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .header-sub { font-size: 13px; opacity: 0.85; }
+  .btn-refresh { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: inherit; display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; transition: background 0.15s; }
+  .btn-refresh:hover { background: rgba(255,255,255,0.25); }
+  .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* CONTROLS */
+  .controls { background: white; border-bottom: 1px solid var(--ms-border); position: sticky; top: 0; z-index: 20; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .controls-inner { max-width: 1200px; margin: 0 auto; padding: 12px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .filter-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .filter-label { font-size: 12px; color: var(--ms-text-muted); font-weight: 500; margin-right: 2px; }
+  .range-select { padding: 4px 10px; border: 1px solid #c8c6c4; border-radius: 4px; font-size: 12px; font-family: inherit; background: white; cursor: pointer; outline: none; color: var(--ms-text); }
+  .range-select:focus { border-color: var(--ms-purple); }
+  .pill { padding: 5px 12px 4px; border-radius: 16px; border: 1px solid #c8c6c4; font-size: 12px; cursor: pointer; background: white; color: var(--ms-text); font-family: inherit; transition: all 0.15s; white-space: nowrap; display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
+  .pill:hover { border-color: var(--ms-purple); color: var(--ms-purple); }
+  .pill.active { background: var(--ms-purple); border-color: var(--ms-purple); color: white; }
+  .pill.active:hover { background: #4b0082; }
+  .pill-count { font-size: 10px; font-weight: 600; line-height: 1; opacity: 0.6; }
+  .pill.active .pill-count { opacity: 0.85; }
+
+  /* MAIN */
+  .main { max-width: 1200px; margin: 0 auto; padding: 20px 24px 60px; }
+  .error-msg { background: #fde7e9; border: 1px solid #f3c4c7; color: #c50f1f; padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; font-size: 13px; }
+  .state-msg { text-align: center; padding: 60px 24px; color: var(--ms-text-muted); }
+  .state-msg h3 { font-size: 16px; margin: 12px 0 6px; color: var(--ms-text); }
+  .state-msg p { font-size: 13px; }
+  .status-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 13px; color: var(--ms-text-muted); }
+  .status-bar strong { color: var(--ms-text); }
+
+  /* LEGEND */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; background: white; padding: 10px 16px; border-radius: 6px; border: 1px solid var(--ms-border); font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; color: var(--ms-text-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* TIMELINE OUTER */
+  .tl-outer { background: white; border: 1px solid var(--ms-border); border-radius: 6px; overflow: hidden; }
+  .tl-scroll { overflow-x: auto; }
+  .tl-inner { min-width: 640px; }
+
+  /* AXIS ROW */
+  .tl-axis-row { display: grid; grid-template-columns: 162px 1fr; border-bottom: 2px solid var(--ms-border); background: #faf9f8; }
+  .tl-axis-spacer { border-right: 1px solid var(--ms-border); padding: 6px 12px 6px; font-size: 11px; color: var(--ms-text-muted); display: flex; align-items: flex-end; font-weight: 500; }
+  .tl-axis-ticks { position: relative; height: 34px; }
+  .tl-tick { position: absolute; font-size: 10px; color: var(--ms-text-muted); white-space: nowrap; bottom: 5px; transform: translateX(-50%); }
+  .tl-tick::before { content:''; position:absolute; top:-7px; left:50%; width:1px; height:5px; background:#d0cecc; }
+
+  /* LANE */
+  .tl-lane { display: grid; grid-template-columns: 162px 1fr; border-bottom: 1px solid var(--ms-border); }
+  .tl-lane:last-child { border-bottom: none; }
+  .tl-lane.focused { background: var(--ms-purple-light); }
+  .tl-lane-label { border-right: 1px solid var(--ms-border); padding: 12px 12px 0; font-size: 12px; font-weight: 600; color: var(--ms-text); display: flex; align-items: flex-start; gap: 5px; min-height: 56px; }
+  .tl-lane-track { position: relative; }
+
+  /* DECORATIONS */
+  .tl-grid-line { position: absolute; top: 0; bottom: 0; width: 1px; background: #efedeb; pointer-events: none; z-index: 0; }
+  .tl-today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(196,67,67,0.45); z-index: 3; pointer-events: none; }
+  .tl-today-label { position: absolute; top: 3px; left: 4px; font-size: 9px; color: rgba(180,50,50,0.75); white-space: nowrap; font-weight: 600; }
+
+  /* ITEMS */
+  .tl-item { position: absolute; transform: translateX(-50%); z-index: 2; text-decoration: none; }
+  .tl-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.22); transition: transform 0.12s, box-shadow 0.12s; }
+  .tl-item:hover .tl-dot { transform: scale(1.55); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .tl-dot.s-launched      { background: #107c10; }
+  .tl-dot.s-rollingout    { background: #7a4f00; }
+  .tl-dot.s-preview       { background: #0078d4; }
+  .tl-dot.s-indevelopment { background: #5c2d91; }
+  .tl-dot.s-cancelled     { background: #c50f1f; }
+  .tl-dot.s-unknown       { background: #a19f9d; }
+
+  /* Label shown only when lane is focused */
+  .tl-item-label { display: none; position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--ms-text-muted); white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis; pointer-events: none; text-align: center; }
+  .tl-lane.focused .tl-item-label { display: block; }
+
+  /* TOOLTIP */
+  .tl-tooltip { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); background: #1a1a2e; color: white; padding: 10px 12px; border-radius: 6px; font-size: 12px; width: 230px; pointer-events: none; opacity: 0; transition: opacity 0.12s; z-index: 50; box-shadow: 0 4px 16px rgba(0,0,0,0.3); line-height: 1.4; }
+  .tl-tooltip::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:#1a1a2e; }
+  .tl-item:hover .tl-tooltip { opacity: 1; }
+  .tl-item.edge-left  .tl-tooltip { left: 0; transform: none; }
+  .tl-item.edge-left  .tl-tooltip::after { left: 12px; transform: none; }
+  .tl-item.edge-right .tl-tooltip { left: auto; right: 0; transform: none; }
+  .tl-item.edge-right .tl-tooltip::after { left: auto; right: 12px; transform: none; }
+  .tl-tt-title { font-weight: 600; font-size: 11px; margin-bottom: 3px; }
+  .tl-tt-id    { font-size: 10px; opacity: 0.6; margin-bottom: 3px; }
+  .tl-tt-date  { font-size: 10px; opacity: 0.75; }
+  .tl-tt-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; margin-top: 5px; }
+  .tl-tt-badge.s-launched      { background: #107c10; }
+  .tl-tt-badge.s-rollingout    { background: #7a4f00; }
+  .tl-tt-badge.s-preview       { background: #0078d4; }
+  .tl-tt-badge.s-indevelopment { background: #5c2d91; }
+  .tl-tt-badge.s-cancelled     { background: #c50f1f; }
+
+  @media (max-width: 640px) {
+    .header-inner { flex-direction: column; }
+    .controls-inner, .main { padding-left: 12px; padding-right: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="topnav-brand">📋 M365 Updates</span>
+  <a href="index.html">Message Centre</a>
+  <a href="roadmap.html">Roadmap</a>
+  <a href="timeline.html" class="active">Timeline</a>
+</nav>
+
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>🗓 Roadmap Timeline</h1>
+      <div class="header-sub" id="headerSub">Loading roadmap data…</div>
+    </div>
+    <button class="btn-refresh" id="btnRefresh" onclick="loadData(true)">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="controls-inner">
+    <div class="filter-row">
+      <span class="filter-label">View:</span>
+      <select class="range-select" id="rangeSelect" onchange="renderAll()">
+        <option value="180">Last 6 months</option>
+        <option value="365" selected>Last year</option>
+        <option value="730">Last 2 years</option>
+        <option value="0">All time</option>
+      </select>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Product:</span>
+      <button class="pill active" data-product="All" onclick="setProduct('All')">All<span class="pill-count"></span></button>
+      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot<span class="pill-count"></span></button>
+      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio<span class="pill-count"></span></button>
+      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform<span class="pill-count"></span></button>
+      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps<span class="pill-count"></span></button>
+      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate<span class="pill-count"></span></button>
+      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales<span class="pill-count"></span></button>
+      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central<span class="pill-count"></span></button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="errorBanner" class="error-msg" style="display:none"></div>
+  <div id="statusBar" class="status-bar" style="display:none"><span id="statusText"></span></div>
+  <div id="content">
+    <div class="state-msg">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <h3>Loading…</h3>
+      <p>Fetching roadmap from mc.merill.net</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA_URL = 'https://mc.merill.net/messages-index.json';
+
+const PRODUCT_RULES = {
+  'Copilot': s => { const l = s.toLowerCase(); return (l.includes('copilot') && !l.includes('copilot studio')) || l.includes('microsoft 365 copilot'); },
+  'Copilot Studio':     s => s.toLowerCase().includes('copilot studio'),
+  'Power Platform':     s => s.toLowerCase().includes('power platform'),
+  'Power Apps':         s => s.toLowerCase().includes('power apps') || s.toLowerCase().includes('powerapps'),
+  'Power Automate':     s => s.toLowerCase().includes('power automate'),
+  'Dynamics 365 Sales': s => { const l = s.toLowerCase(); return l.includes('dynamics 365 sales') || l.includes('dynamics sales') || l.includes('copilot for sales'); },
+  'Business Central':   s => s.toLowerCase().includes('business central'),
+};
+
+const PRODUCT_ICONS = {
+  'Copilot': '🤖', 'Copilot Studio': '🧩', 'Power Platform': '⚡',
+  'Power Apps': '📱', 'Power Automate': '🔄', 'Dynamics 365 Sales': '💼', 'Business Central': '📊',
+};
+
+const STATUS_DOT = {
+  'Launched': 's-launched', 'Rolling out': 's-rollingout', 'Preview': 's-preview',
+  'In development': 's-indevelopment', 'Cancelled': 's-cancelled',
+};
+const STATUS_BADGE_TEXT = {
+  'Launched': '✓ Launched', 'Rolling out': '↗ Rolling out', 'Preview': '◎ Preview',
+  'In development': '⚙ In development', 'Cancelled': '✕ Cancelled',
+};
+
+let allItems = [];
+let activeProduct = 'All';
+let lastFetchTime = null;
+
+async function loadData(forceRefresh = false) {
+  const btn = document.getElementById('btnRefresh');
+  const icon = document.getElementById('refreshIcon');
+  btn.disabled = true;
+  icon.classList.add('spin');
+  hideError();
+  setContent(`<div class="state-msg">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    <h3>Fetching roadmap…</h3><p>Loading from mc.merill.net</p>
+  </div>`);
+  try {
+    const url = forceRefresh ? DATA_URL + '?t=' + Date.now() : DATA_URL;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    allItems = Array.isArray(data) ? data : (data.items || data.messages || []);
+    lastFetchTime = new Date();
+    renderAll();
+  } catch (e) {
+    showError('Failed to load data: ' + e.message);
+    setContent(`<div class="state-msg">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
+      <h3>Could not load data</h3><p>Check your connection and try refreshing.</p>
+    </div>`);
+  } finally {
+    btn.disabled = false;
+    icon.classList.remove('spin');
+  }
+}
+
+function renderAll() {
+  const days = parseInt(document.getElementById('rangeSelect').value);
+  const cutoff = days > 0 ? new Date(Date.now() - days * 86400000) : null;
+
+  let items = allItems.filter(i => i.Id && i.Id.startsWith('RM'));
+
+  if (cutoff) {
+    items = items.filter(i => {
+      const d = new Date(i.LastModifiedDateTime || i.StartDateTime);
+      return d >= cutoff;
+    });
+  }
+
+  items = items.map(i => ({ ...i, _products: getProducts(i) }));
+  items = items.filter(i => i._products.length > 0);
+
+  updatePillCounts(items);
+
+  if (activeProduct !== 'All') {
+    items = items.filter(i => i._products.includes(activeProduct));
+  }
+
+  updateStatusBar(items.length);
+
+  if (items.length === 0) {
+    const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+    setContent(`<div class="state-msg">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
+      <h3>No roadmap items found</h3>
+      <p>No items in ${rangeLabel}. Try widening the date range.</p>
+    </div>`);
+    return;
+  }
+
+  // Build time axis from actual item dates
+  const dates = items.map(i => new Date(i.StartDateTime || i.LastModifiedDateTime)).filter(d => !isNaN(d));
+  if (!dates.length) return;
+
+  const today = new Date();
+  let tMin = new Date(Math.min(...dates, today));
+  let tMax = new Date(Math.max(...dates, today));
+  const span = tMax - tMin || 86400000 * 30;
+  tMin = new Date(tMin - span * 0.04);
+  tMax = new Date(tMax + span * 0.04);
+
+  renderTimeline(items, tMin, tMax);
+
+  const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+  document.getElementById('headerSub').textContent =
+    `${items.length} roadmap item${items.length !== 1 ? 's' : ''} · ${rangeLabel} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+}
+
+function renderTimeline(items, tMin, tMax) {
+  const totalMs = tMax - tMin;
+  const todayPct = ((new Date() - tMin) / totalMs * 100).toFixed(2);
+  const ticks = makeTicks(tMin, tMax, totalMs);
+
+  const products = activeProduct === 'All' ? Object.keys(PRODUCT_RULES) : [activeProduct];
+  const lanes = products
+    .map(p => ({ product: p, items: items.filter(i => i._products.includes(p)) }))
+    .filter(l => l.items.length > 0);
+
+  if (!lanes.length) {
+    setContent(`<div class="state-msg"><h3>No items to display</h3></div>`);
+    return;
+  }
+
+  const ticksHtml = ticks.map(t =>
+    `<span class="tl-tick" style="left:${t.pct.toFixed(2)}%">${t.label}</span>`
+  ).join('');
+
+  const lanesHtml = lanes.map(({ product, items: li }) => buildLane(product, li, tMin, totalMs)).join('');
+
+  const LEGEND = [
+    ['#107c10','✓ Launched'], ['#7a4f00','↗ Rolling out'], ['#0078d4','◎ Preview'],
+    ['#5c2d91','⚙ In development'], ['#c50f1f','✕ Cancelled'],
+  ];
+
+  setContent(`
+    <div class="legend">
+      <span class="filter-label">Status:</span>
+      ${LEGEND.map(([c, l]) => `<span class="legend-item"><span class="legend-dot" style="background:${c}"></span>${l}</span>`).join('')}
+      <span class="legend-item" style="margin-left:4px">
+        <span style="display:inline-block;width:12px;height:2px;background:rgba(196,67,67,0.5);vertical-align:middle;margin-right:3px"></span>Today
+      </span>
+    </div>
+    <div class="tl-outer">
+      <div class="tl-scroll">
+        <div class="tl-inner">
+          <div class="tl-axis-row">
+            <div class="tl-axis-spacer">Product</div>
+            <div class="tl-axis-ticks">${ticksHtml}</div>
+          </div>
+          ${lanesHtml}
+        </div>
+      </div>
+    </div>`);
+
+  // Inject grid lines + today marker into each lane track after render
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.tl-lane-track').forEach((track, idx) => {
+      ticks.forEach(t => {
+        const gl = document.createElement('div');
+        gl.className = 'tl-grid-line';
+        gl.style.left = t.pct.toFixed(2) + '%';
+        track.appendChild(gl);
+      });
+      const todayEl = document.createElement('div');
+      todayEl.className = 'tl-today-line';
+      todayEl.style.left = todayPct + '%';
+      if (idx === 0) {
+        const lbl = document.createElement('div');
+        lbl.className = 'tl-today-label';
+        lbl.textContent = 'Today';
+        todayEl.appendChild(lbl);
+      }
+      track.appendChild(todayEl);
+    });
+  });
+}
+
+function buildLane(product, items, tMin, totalMs) {
+  const icon = PRODUCT_ICONS[product] || '📌';
+  const isFocused = activeProduct === product;
+  const OVERLAP_PCT = 2.5;
+  const ROW_H = isFocused ? 32 : 22;
+  const PAD_TOP = 12;
+
+  const positioned = items.map(item => {
+    const d = new Date(item.StartDateTime || item.LastModifiedDateTime);
+    const x = isNaN(d) ? 50 : Math.max(0.5, Math.min(99.5, (d - tMin) / totalMs * 100));
+    return { item, x, status: getPrimaryStatus(item.Tags || []) };
+  }).sort((a, b) => a.x - b.x);
+
+  // Anti-collision: assign rows
+  const rowMax = [];
+  for (const p of positioned) {
+    let row = 0;
+    while (rowMax[row] !== undefined && p.x - rowMax[row] < OVERLAP_PCT) row++;
+    rowMax[row] = p.x;
+    p.row = row;
+  }
+
+  const maxRow = Math.max(0, ...positioned.map(p => p.row));
+  const trackH = PAD_TOP + (maxRow + 1) * ROW_H + 14 + (isFocused ? 16 : 0);
+
+  const itemsHtml = positioned.map(({ item, x, status, row }) => {
+    const dot = STATUS_DOT[status] || 's-unknown';
+    const badge = STATUS_BADGE_TEXT[status] || status;
+    const id = item.Id || '';
+    const title = item.Title || 'Untitled';
+    const date = formatDate(item.StartDateTime || item.LastModifiedDateTime);
+    const url = item.Url || `https://mc.merill.net/message/${id}`;
+    const top = PAD_TOP + row * ROW_H;
+    const edgeClass = x < 14 ? ' edge-left' : x > 86 ? ' edge-right' : '';
+
+    return `<a class="tl-item${edgeClass}" href="${esc(url)}" target="_blank" style="left:${x.toFixed(2)}%;top:${top}px">
+        <div class="tl-dot ${dot}"></div>
+        <div class="tl-item-label">${esc(title.length > 16 ? title.slice(0,15) + '…' : title)}</div>
+        <div class="tl-tooltip">
+          <div class="tl-tt-title">${esc(title.length > 68 ? title.slice(0,67) + '…' : title)}</div>
+          <div class="tl-tt-id">${esc(id)}</div>
+          ${date ? `<div class="tl-tt-date">📅 ${esc(date)}</div>` : ''}
+          <span class="tl-tt-badge ${dot}">${badge}</span>
+        </div>
+      </a>`;
+  }).join('');
+
+  return `<div class="tl-lane${isFocused ? ' focused' : ''}">
+      <div class="tl-lane-label">${icon} ${esc(product)}</div>
+      <div class="tl-lane-track" style="height:${trackH}px">${itemsHtml}</div>
+    </div>`;
+}
+
+function makeTicks(tMin, tMax, totalMs) {
+  const totalDays = totalMs / 86400000;
+  const isQuarterly = totalDays > 500;
+  const fmt = { month: 'short', year: '2-digit' };
+  const ticks = [];
+
+  const d = new Date(tMin);
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  if (d < tMin) d.setMonth(d.getMonth() + 1);
+
+  while (d <= tMax) {
+    if (!isQuarterly || d.getMonth() % 3 === 0) {
+      const pct = (d - tMin) / totalMs * 100;
+      if (pct >= 0 && pct <= 100) ticks.push({ pct, label: d.toLocaleDateString('en-GB', fmt) });
+    }
+    d.setMonth(d.getMonth() + 1);
+  }
+  return ticks;
+}
+
+function getPrimaryStatus(tags) {
+  for (const s of ['Rolling out', 'Preview', 'In development', 'Launched', 'Cancelled']) {
+    if (tags.includes(s)) return s;
+  }
+  return 'Unknown';
+}
+
+function getProducts(item) {
+  const combined = [...(item.Services || []), item.Title || '', item.Summary || ''];
+  return Object.entries(PRODUCT_RULES).filter(([, fn]) => combined.some(s => fn(s))).map(([p]) => p);
+}
+
+function updatePillCounts(items) {
+  document.querySelectorAll('.pill[data-product]').forEach(pill => {
+    const countEl = pill.querySelector('.pill-count');
+    if (!countEl) return;
+    const p = pill.dataset.product;
+    countEl.textContent = p === 'All' ? items.length : items.filter(i => i._products.includes(p)).length;
+  });
+}
+
+function setProduct(p) {
+  activeProduct = p;
+  document.querySelectorAll('.pill[data-product]').forEach(el => el.classList.toggle('active', el.dataset.product === p));
+  renderAll();
+}
+
+function updateStatusBar(count) {
+  document.getElementById('statusBar').style.display = 'flex';
+  const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+  document.getElementById('statusText').innerHTML =
+    `Showing <strong>${count}</strong> item${count !== 1 ? 's' : ''}` +
+    (activeProduct !== 'All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    ` · ${rangeLabel}`;
+}
+
+function setContent(html) { document.getElementById('content').innerHTML = html; }
+function showError(msg) { const el = document.getElementById('errorBanner'); el.innerHTML = '⚠ ' + msg; el.style.display = 'block'; }
+function hideError() { document.getElementById('errorBanner').style.display = 'none'; }
+
+function formatDate(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  catch { return iso.split('T')[0]; }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+loadData();
+</script>
+</body>
+</html>
