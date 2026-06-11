@@ -699,11 +699,14 @@ function rebuildDropdownList(counts) {
   list.innerHTML = keys.map(key => {
     const c = counts[key] ?? 0;
     return `<label class="prod-item">
-      <input type="checkbox"${selectedProducts.includes(key) ? ' checked' : ''} onchange="toggleProduct(${JSON.stringify(key)})">
+      <input type="checkbox"${selectedProducts.includes(key) ? ' checked' : ''} data-key="${esc(key)}">
       <span class="prod-item-label">${esc(key)}</span>
       <span class="prod-item-count" data-key="${esc(key)}">${c}</span>
     </label>`;
   }).join('');
+  list.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => toggleProduct(cb.dataset.key));
+  });
 }
 
 function toggleProduct(key) {
@@ -761,12 +764,14 @@ function refreshDropdownState() {
   const chips = document.getElementById('prodChips');
   if (chips) {
     chips.innerHTML = selectedProducts.map(key =>
-      `<span class="prod-chip">${esc(key)}<span class="prod-chip-x" onclick="removeProduct(${JSON.stringify(key)})" title="Remove">×</span></span>`
+      `<span class="prod-chip">${esc(key)}<span class="prod-chip-x" data-key="${esc(key)}" title="Remove">×</span></span>`
     ).join('');
+    chips.querySelectorAll('.prod-chip-x').forEach(x => {
+      x.addEventListener('click', () => removeProduct(x.dataset.key));
+    });
   }
   document.querySelectorAll('#prodList .prod-item input').forEach(cb => {
-    const lbl = cb.parentElement?.querySelector('.prod-item-label')?.textContent;
-    if (lbl !== undefined) cb.checked = selectedProducts.includes(lbl);
+    cb.checked = selectedProducts.includes(cb.dataset.key);
   });
 }
 
