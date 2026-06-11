@@ -13,9 +13,9 @@
     --ms-text-muted: #605e5c;
     --ms-border: #edebe9;
     --page-bg: #f3f2f1;
-    --c-rolling: #005C35;
-    --c-preview: #007A45;
-    --c-dev:     #00864F;
+    --c-rolling: #107C10;
+    --c-preview: #C07A00;
+    --c-dev:     #C50F1F;
   }
   body { font-family: 'Segoe UI', SegoeUI, Roboto, 'Helvetica Neue', Arial, sans-serif; background: var(--page-bg); color: var(--ms-text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
 
@@ -185,10 +185,12 @@
     padding: 14px 16px 12px;
     max-width: 340px;
     min-width: 240px;
-    pointer-events: none;
+    pointer-events: auto;
     font-size: 12px;
     line-height: 1.45;
     display: none;
+    max-height: 72vh;
+    overflow-y: auto;
   }
   .tl-tip-badge {
     display: inline-block;
@@ -228,6 +230,26 @@
     font-size: 10px;
     color: var(--ms-text-muted);
   }
+
+  /* ── PRODUCT DROPDOWN ── */
+  .prod-dropdown { position: relative; display: inline-flex; align-items: center; }
+  .prod-trigger { padding: 5px 12px; border: 1px solid #c8c6c4; border-radius: 16px; font-size: 12px; cursor: pointer; background: white; color: var(--ms-text); font-family: inherit; transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+  .prod-trigger:hover { border-color: #00864F; color: #00864F; }
+  .prod-trigger.has-selection { background: #00864F; border-color: #00864F; color: white; }
+  .prod-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .prod-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px 2px 10px; background: #E6F5EE; color: #00864F; border-radius: 10px; font-size: 11px; font-weight: 500; border: 1px solid rgba(0,134,79,0.25); }
+  .prod-chip-x { cursor: pointer; opacity: 0.55; line-height: 1; font-size: 14px; margin-left: 1px; }
+  .prod-chip-x:hover { opacity: 1; }
+  .prod-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 260px; max-width: 320px; background: white; border: 1px solid #c8c6c4; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.14); overflow: hidden; }
+  .prod-search { display: block; width: 100%; padding: 9px 12px; border: none; border-bottom: 1px solid #edebe9; font-size: 13px; font-family: inherit; outline: none; color: var(--ms-text); background: #faf9f8; }
+  .prod-list { max-height: 260px; overflow-y: auto; }
+  .prod-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; font-size: 12px; user-select: none; transition: background 0.1s; }
+  .prod-item:hover { background: #E6F5EE; }
+  .prod-item input[type=checkbox] { accent-color: #00864F; width: 14px; height: 14px; flex-shrink: 0; cursor: pointer; }
+  .prod-item-label { flex: 1; color: var(--ms-text); }
+  .prod-item-count { font-size: 11px; color: var(--ms-text-muted); font-weight: 600; min-width: 26px; text-align: right; }
+  .prod-panel-footer { padding: 6px 12px; border-top: 1px solid #edebe9; font-size: 11px; color: var(--ms-text-muted); cursor: pointer; text-align: center; background: #faf9f8; }
+  .prod-panel-footer:hover { color: var(--ms-text); }
 </style>
 </head>
 <body>
@@ -264,16 +286,17 @@
         <option value="365">1 year</option>
       </select>
     </div>
-    <div class="filter-row">
+    <div class="filter-row" id="productFilterRow" style="flex-wrap:wrap">
       <span class="filter-label">Product:</span>
-      <button class="pill active" data-product="All" onclick="setProduct('All')">All<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate<span class="pill-count"></span></button>
-      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales<span class="pill-count"></span></button>
-      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central<span class="pill-count"></span></button>
+      <div class="prod-dropdown" id="prodDropdown">
+        <button class="prod-trigger" id="prodTrigger" type="button" onclick="toggleDropdown()">Products: All ▾</button>
+        <div class="prod-panel" id="prodPanel" style="display:none">
+          <input class="prod-search" id="prodSearch" type="text" placeholder="Search products…" oninput="filterDropdown()" autocomplete="off">
+          <div class="prod-list" id="prodList"></div>
+          <div class="prod-panel-footer" id="prodClearBtn" onclick="clearProducts()" style="display:none">✕ Clear all selections</div>
+        </div>
+      </div>
+      <div id="prodChips" class="prod-chips"></div>
     </div>
   </div>
 </div>
@@ -318,7 +341,8 @@ const PRODUCT_ICONS = { 'Copilot':'🤖','Copilot Studio':'🧩','Power Platform
 const STATUS_SC    = { 'Rolling out':'s-rolling','Preview':'s-preview','In development':'s-dev' };
 const STATUS_BADGE = { 'Rolling out':'↗ Rolling out','Preview':'◎ Preview','In development':'⚙ In development' };
 
-const RSS_URL = 'https://www.microsoft.com/releasecommunications/api/v2/m365/rss';
+// Proxied via local Azure Function to bypass browser CORS restriction
+const RSS_API = '/api/roadmap-rss';
 
 const MONTH_MAP = {
   january:1,february:2,march:3,april:4,may:5,june:6,
@@ -365,7 +389,8 @@ function parseRSSItem(node) {
   };
 }
 
-let allItems = [], activeProduct = 'All', lastFetchTime = null;
+let allItems = [], selectedProducts = loadProductPrefs(), lastFetchTime = null;
+let _prodKeys = [], _prodCurrentCounts = {};
 
 // ── Data ──────────────────────────────────────────────────────────
 async function loadData(forceRefresh = false) {
@@ -374,19 +399,19 @@ async function loadData(forceRefresh = false) {
   btn.disabled = true; icon.classList.add('spin'); hideError();
   setContent(`<div class="state-msg">
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-    <h3>Fetching roadmap…</h3><p>Loading from Microsoft</p></div>`);
+    <h3>Fetching roadmap…</h3><p>Loading from Microsoft Roadmap</p></div>`);
   try {
-    const url = RSS_URL + (forceRefresh ? '?t='+Date.now() : '');
-    const res = await fetch(url);
+    const res = await fetch(RSS_API + (forceRefresh ? '?_='+Date.now() : ''));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
     const xml = new DOMParser().parseFromString(text, 'application/xml');
     if (xml.querySelector('parsererror')) throw new Error('XML parse error');
     allItems = [...xml.querySelectorAll('item')].map(parseRSSItem);
     lastFetchTime = new Date();
+    buildProductPills(allItems);
     renderAll();
   } catch(e) {
-    showError('Failed to load data: '+e.message);
+    showError('Failed to load data: '+e.message+'. Try refreshing.');
     setContent(`<div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
       <h3>Could not load data</h3><p>Check your connection and try refreshing.</p></div>`);
@@ -401,17 +426,23 @@ function renderAll() {
 
   let items = allItems
     .filter(i => i.Id && i.Id.startsWith('RM'))
-    .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags||[]) }))
+    .map(i => ({ ...i, _products: getProducts(i), _labels: getLabels(i), _status: getPrimaryStatus(i.Tags||[]) }))
     .filter(i => FORWARD_STATUSES.has(i._status) && i._gaDate)
     .filter(i => i._gaDate >= today && i._gaDate <= horizon);
 
-  items = items.filter(i => i._products.length > 0);
+  items = items.filter(i => i._labels.length > 0);
 
   // Populate global item map for tooltip lookups (before product filter)
   window._tlItemMap = Object.fromEntries(items.map(i => [i.Id, i]));
 
+  // Pill counts reflect the current GA horizon, BEFORE the product filter
   updatePillCounts(items);
-  if (activeProduct !== 'All') items = items.filter(i => i._products.includes(activeProduct));
+
+  if (selectedProducts.length > 0) {
+    items = items.filter(i =>
+      selectedProducts.some(sel => i._labels.includes(sel))
+    );
+  }
 
   updateStatusBar(items.length);
 
@@ -433,7 +464,8 @@ function renderAll() {
 
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('headerSub').textContent =
-    `${items.length} roadmap item${items.length!==1?'s':''} going GA within ${rl} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${items.length} roadmap item${items.length!==1?'s':''} going GA within ${rl}` +
+    (selectedProducts.length > 0 ? ` · ${selectedProducts.join(', ')}` : '');
 }
 
 // ── Timeline renderer ─────────────────────────────────────────────
@@ -441,9 +473,10 @@ function renderTimeline(items, tMin, tMax, today) {
   const totalMs  = tMax - tMin;
   const todayPct = Math.max(0, Math.min(100, (today - tMin) / totalMs * 100));
   const ticks   = makeTicks(tMin, tMax, totalMs);
-  const products = activeProduct === 'All' ? Object.keys(PRODUCT_RULES) : [activeProduct];
-  const lanes = products
-    .map(p => ({ product: p, items: items.filter(i => i._products.includes(p)) }))
+  // One lane per label; known products first, then other labels by frequency
+  const laneLabels = selectedProducts.length === 0 ? orderedLabels(items) : selectedProducts;
+  const lanes = laneLabels
+    .map(p => ({ product: p, items: items.filter(i => i._labels.includes(p)) }))
     .filter(l => l.items.length > 0);
 
   if (!lanes.length) { setContent(`<div class="state-msg"><h3>No items to display</h3></div>`); return; }
@@ -516,7 +549,7 @@ function renderTimeline(items, tMin, tMax, today) {
 // ── Lane builder ──────────────────────────────────────────────────
 function buildLane(product, items, tMin, totalMs) {
   const icon = PRODUCT_ICONS[product] || '📌';
-  const isFocused = activeProduct === product;
+  const isFocused = selectedProducts.length === 1 && selectedProducts[0] === product;
 
   // Position each item on the 0–100% axis by GA date
   const placed = items.map(item => {
@@ -572,7 +605,7 @@ function buildLane(product, items, tMin, totalMs) {
       <a class="tl-card ${sc}" href="${esc(url)}" target="_blank"
          style="left:${x.toFixed(2)}%;top:${cardTop}px"
          data-x="${x.toFixed(2)}" data-sc="${sc}" data-id="${esc(id)}"
-         onmouseenter="tipShow('${esc(id)}',event)" onmouseleave="tipHide()">
+         onmouseenter="tipShow('${esc(id)}',event)" onmouseleave="tipStartHide()">
         <div class="tl-card-title">${esc(title)}</div>
         <span class="tl-card-badge">${badge}</span>
         ${date ? `<div class="tl-card-date">GA: ${esc(date)}</div>` : ''}
@@ -614,24 +647,162 @@ function getProducts(item) {
   const c = [...(item.Services||[]), item.Title||'', item.Summary||''];
   return Object.entries(PRODUCT_RULES).filter(([,fn])=>c.some(s=>fn(s))).map(([p])=>p);
 }
-function updatePillCounts(items) {
-  document.querySelectorAll('.pill[data-product]').forEach(pill => {
-    const el = pill.querySelector('.pill-count'); if (!el) return;
-    const p  = pill.dataset.product;
-    el.textContent = p==='All' ? items.length : items.filter(i=>i._products.includes(p)).length;
+// Labels = known products (matched via services/title/summary) plus any
+// services that match no known product rule. Used consistently for pill
+// counts, filtering and lane grouping so the numbers always agree.
+function getLabels(item) {
+  const labels = new Set(getProducts(item));
+  (item.Services || []).forEach(svc => {
+    if (svc && !Object.values(PRODUCT_RULES).some(fn => fn(svc))) labels.add(svc);
+  });
+  return [...labels];
+}
+
+// Known products first (rule order), then other labels by frequency
+function orderedLabels(items) {
+  const counts = {};
+  items.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+  const known = Object.keys(PRODUCT_RULES).filter(p => counts[p]);
+  const extra = Object.keys(counts).filter(l => !PRODUCT_RULES[l]).sort((a, b) => counts[b] - counts[a]);
+  return [...known, ...extra];
+}
+
+function buildProductPills(dataItems) {
+  // Eligible set: forward-status RM items with a parsed GA date
+  const eligible = dataItems
+    .filter(i => i.Id && i.Id.startsWith('RM') && i._gaDate)
+    .filter(i => FORWARD_STATUSES.has(getPrimaryStatus(i.Tags || [])))
+    .map(i => ({ _labels: getLabels(i) }));
+  const counts = {};
+  eligible.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+
+  _prodKeys = [
+    ...Object.keys(PRODUCT_RULES).filter(p => counts[p]),
+    ...Object.keys(counts).filter(l => !PRODUCT_RULES[l]).sort((a, b) => counts[b] - counts[a]),
+  ];
+  _prodCurrentCounts = { ...counts };
+
+  rebuildDropdownList(counts);
+  refreshDropdownState();
+}
+
+function rebuildDropdownList(counts) {
+  const list = document.getElementById('prodList');
+  if (!list) return;
+  const q = (document.getElementById('prodSearch')?.value || '').toLowerCase();
+  const keys = q ? _prodKeys.filter(k => k.toLowerCase().includes(q)) : _prodKeys;
+
+  if (!keys.length) {
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:#605e5c;font-size:12px">No products match</div>';
+    return;
+  }
+  list.innerHTML = keys.map(key => {
+    const c = counts[key] ?? 0;
+    return `<label class="prod-item">
+      <input type="checkbox"${selectedProducts.includes(key) ? ' checked' : ''} onchange="toggleProduct(${JSON.stringify(key)})">
+      <span class="prod-item-label">${esc(key)}</span>
+      <span class="prod-item-count" data-key="${esc(key)}">${c}</span>
+    </label>`;
+  }).join('');
+}
+
+function toggleProduct(key) {
+  const idx = selectedProducts.indexOf(key);
+  if (idx >= 0) selectedProducts.splice(idx, 1); else selectedProducts.push(key);
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function removeProduct(key) {
+  const idx = selectedProducts.indexOf(key);
+  if (idx >= 0) selectedProducts.splice(idx, 1);
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function clearProducts() {
+  selectedProducts = [];
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function toggleDropdown() {
+  const panel = document.getElementById('prodPanel');
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+  } else {
+    rebuildDropdownList(_prodCurrentCounts);
+    panel.style.display = 'block';
+    document.getElementById('prodSearch')?.focus();
+  }
+}
+
+function filterDropdown() {
+  rebuildDropdownList(_prodCurrentCounts);
+}
+
+function refreshDropdownState() {
+  const trigger = document.getElementById('prodTrigger');
+  const footer  = document.getElementById('prodClearBtn');
+  if (!trigger) return;
+  if (selectedProducts.length === 0) {
+    trigger.textContent = 'Products: All ▾';
+    trigger.classList.remove('has-selection');
+    if (footer) footer.style.display = 'none';
+  } else {
+    trigger.textContent = `Products: ${selectedProducts.length} selected ▾`;
+    trigger.classList.add('has-selection');
+    if (footer) footer.style.display = 'block';
+  }
+  const chips = document.getElementById('prodChips');
+  if (chips) {
+    chips.innerHTML = selectedProducts.map(key =>
+      `<span class="prod-chip">${esc(key)}<span class="prod-chip-x" onclick="removeProduct(${JSON.stringify(key)})" title="Remove">×</span></span>`
+    ).join('');
+  }
+  document.querySelectorAll('#prodList .prod-item input').forEach(cb => {
+    const lbl = cb.parentElement?.querySelector('.prod-item-label')?.textContent;
+    if (lbl !== undefined) cb.checked = selectedProducts.includes(lbl);
   });
 }
-function setProduct(p) {
-  activeProduct = p;
-  document.querySelectorAll('.pill[data-product]').forEach(el=>el.classList.toggle('active', el.dataset.product===p));
-  renderAll();
+
+function refreshPillActive() { refreshDropdownState(); }
+
+function updatePillCounts(items) {
+  const liveCounts = {};
+  items.forEach(i => i._labels.forEach(l => liveCounts[l] = (liveCounts[l] || 0) + 1));
+  _prodCurrentCounts = liveCounts;
+  document.querySelectorAll('#prodList .prod-item-count').forEach(span => {
+    const key = span.dataset.key;
+    if (key !== undefined) span.textContent = liveCounts[key] ?? 0;
+  });
+}
+
+document.addEventListener('click', e => {
+  const dd = document.getElementById('prodDropdown');
+  if (dd && !dd.contains(e.target)) {
+    const panel = document.getElementById('prodPanel');
+    if (panel) panel.style.display = 'none';
+  }
+});
+
+function saveProductPrefs() {
+  try { localStorage.setItem('m365_products', JSON.stringify(selectedProducts)); } catch {}
+}
+
+function loadProductPrefs() {
+  try { return JSON.parse(localStorage.getItem('m365_products') || '[]'); } catch { return []; }
 }
 function updateStatusBar(count) {
   document.getElementById('statusBar').style.display = 'flex';
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('statusText').innerHTML =
     `Showing <strong>${count}</strong> roadmap item${count!==1?'s':''}` +
-    (activeProduct!=='All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    (selectedProducts.length > 0 ? ` · ${selectedProducts.length} product filter${selectedProducts.length!==1?'s':''}` : '') +
     ` · GA within ${rl}`;
 }
 function setContent(h) { document.getElementById('content').innerHTML = h; }
@@ -650,8 +821,11 @@ loadData();
 
 // ── Tooltip ───────────────────────────────────────────────────────
 const STATUS_EXCL = new Set(['In development','Preview','Rolling out','Launched','Cancelled','General Availability','Worldwide','GCC','GCC High','DoD']);
+let _tipHideTimer = null;
 
 function tipShow(id, ev) {
+  clearTimeout(_tipHideTimer);
+  _tipHideTimer = null;
   const item = window._tlItemMap && window._tlItemMap[id];
   if (!item) return;
   const tip = document.getElementById('tl-tooltip');
@@ -663,44 +837,48 @@ function tipShow(id, ev) {
   const svcs  = (item.Services || []).join(', ');
   const summary = item.Summary || '';
   const extraTags = (item.Tags || []).filter(t => !STATUS_EXCL.has(t));
+  const url = item.Url || `https://www.microsoft.com/microsoft-365/roadmap?id=${(item.Id||'').replace('RM','')}`;
 
   let html = `<span class="tl-tip-badge ${sc}">${badge}</span>`;
   html += `<div class="tl-tip-title">${esc(item.Title || '')}</div>`;
   if (summary) html += `<div class="tl-tip-summary">${esc(summary)}</div>`;
   html += `<div class="tl-tip-meta">`;
   if (prods)  html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Products:</span><span>${esc(prods)}</span></div>`;
-  if (svcs)   html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Services:</span><span>${esc(svcs)}</span></div>`;
+  if (svcs && svcs !== prods) html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Services:</span><span>${esc(svcs)}</span></div>`;
   if (date)   html += `<div class="tl-tip-row"><span class="tl-tip-lbl">GA date:</span><span>${esc(date)}</span></div>`;
   if (mod)    html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Updated:</span><span>${esc(mod)}</span></div>`;
   html += `</div>`;
   if (extraTags.length) {
     html += `<div class="tl-tip-tags">` + extraTags.map(t => `<span class="tl-tip-tag">${esc(t)}</span>`).join('') + `</div>`;
   }
+  html += `<div style="margin-top:10px"><a href="${esc(url)}" target="_blank" style="font-size:11px;color:#00864F;text-decoration:none">View on Microsoft Roadmap ↗</a></div>`;
 
   tip.innerHTML = html;
-  tip.style.display = 'block';
-  tipPos(ev);
-}
 
-function tipHide() {
-  document.getElementById('tl-tooltip').style.display = 'none';
-}
-
-function tipPos(ev) {
-  const tip = document.getElementById('tl-tooltip');
-  if (!tip || tip.style.display === 'none') return;
-  const tw = tip.offsetWidth  || 340;
-  const th = tip.offsetHeight || 200;
-  let x = ev.clientX + 18, y = ev.clientY + 18;
-  if (x + tw > window.innerWidth  - 10) x = ev.clientX - tw - 10;
-  if (y + th > window.innerHeight - 10) y = ev.clientY - th - 10;
+  // Position once when shown — does not follow mouse
+  const tw = 340, th = 260;
+  let x = ev.clientX + 18;
+  let y = ev.clientY - 40;
+  if (x + tw > window.innerWidth  - 12) x = ev.clientX - tw - 12;
+  if (y + th > window.innerHeight - 12) y = window.innerHeight - th - 12;
+  if (y < 12) y = 12;
   tip.style.left = x + 'px';
   tip.style.top  = y + 'px';
+  tip.style.display = 'block';
 }
 
-document.addEventListener('mousemove', tipPos);
+function tipStartHide() {
+  _tipHideTimer = setTimeout(() => {
+    document.getElementById('tl-tooltip').style.display = 'none';
+  }, 160);
+}
+
+function tipCancelHide() {
+  clearTimeout(_tipHideTimer);
+  _tipHideTimer = null;
+}
 </script>
 
-<div id="tl-tooltip" class="tl-tip"></div>
+<div id="tl-tooltip" class="tl-tip" onmouseenter="tipCancelHide()" onmouseleave="tipStartHide()"></div>
 </body>
 </html>

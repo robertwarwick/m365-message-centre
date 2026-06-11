@@ -407,14 +407,94 @@
     .controls-inner, .main { padding-left: 12px; padding-right: 12px; }
     .search-row { flex-direction: column; }
   }
+
+  /* ── EMAIL ROW ── */
+  .email-input { padding: 5px 10px; border: 1px solid #c8c6c4; border-radius: 4px; font-size: 12px; font-family: inherit; outline: none; width: 220px; transition: border-color 0.15s; color: var(--ms-text); }
+  .email-input:focus { border-color: var(--ms-blue); }
+  .btn-send-email { padding: 5px 14px; border-radius: 4px; border: 1px solid var(--ms-blue); background: var(--ms-blue); color: white; font-size: 12px; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap; }
+  .btn-send-email:hover { background: #006640; border-color: #006640; }
+  .btn-send-email:disabled { opacity: 0.6; cursor: not-allowed; }
+  .email-feedback { font-size: 12px; margin-left: 4px; }
+  .email-feedback.ok { color: #107C10; }
+  .email-feedback.err { color: #c50f1f; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 380px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--ms-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+  }
+  .detail-panel.visible { display: flex; animation: dpSlideIn 0.15s ease; }
+  @keyframes dpSlideIn {
+    from { opacity: 0; transform: translateY(-50%) translateX(14px); }
+    to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+  }
+  .dp-header {
+    background: var(--ms-blue);
+    color: white;
+    padding: 14px 16px;
+    border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+  }
+  .dp-title { font-size: 14px; font-weight: 600; line-height: 1.35; margin-bottom: 8px; }
+  .dp-title a { color: white; text-decoration: none; }
+  .dp-title a:hover { text-decoration: underline; }
+  .dp-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dp-body { padding: 14px 16px; font-size: 13px; color: var(--ms-text); }
+  .dp-section { margin-bottom: 12px; }
+  .dp-label { font-size: 11px; font-weight: 600; color: var(--ms-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .dp-summary { line-height: 1.6; color: var(--ms-text); }
+  .dp-summary img { max-width: 100%; border-radius: 4px; margin: 6px 0; display: block; }
+  .dp-summary a { color: var(--ms-blue); }
+  .dp-meta-row { display: flex; gap: 8px; font-size: 12px; margin-bottom: 4px; color: var(--ms-text-muted); }
+  .dp-meta-lbl { font-weight: 600; color: var(--ms-text); white-space: nowrap; }
+  .dp-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .dp-tag { background: var(--ms-grey-light); border: 1px solid var(--ms-border); padding: 2px 8px; border-radius: 4px; font-size: 11px; color: var(--ms-text-muted); }
+  .dp-footer { padding: 10px 16px; border-top: 1px solid var(--ms-border); display: flex; gap: 12px; flex-shrink: 0; }
+  .dp-link { color: var(--ms-blue); font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+  .dp-link:hover { text-decoration: underline; }
+  .dp-close { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--ms-text-muted); font-size: 18px; line-height: 1; padding: 0 2px; }
+  .dp-close:hover { color: var(--ms-text); }
+
+  /* ── PRODUCT DROPDOWN ── */
+  .prod-dropdown { position: relative; display: inline-flex; align-items: center; }
+  .prod-trigger { padding: 5px 12px; border: 1px solid #c8c6c4; border-radius: 16px; font-size: 12px; cursor: pointer; background: white; color: var(--ms-text); font-family: inherit; transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+  .prod-trigger:hover { border-color: #00864F; color: #00864F; }
+  .prod-trigger.has-selection { background: #00864F; border-color: #00864F; color: white; }
+  .prod-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .prod-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px 2px 10px; background: #E6F5EE; color: #00864F; border-radius: 10px; font-size: 11px; font-weight: 500; border: 1px solid rgba(0,134,79,0.25); }
+  .prod-chip-x { cursor: pointer; opacity: 0.55; line-height: 1; font-size: 14px; margin-left: 1px; }
+  .prod-chip-x:hover { opacity: 1; }
+  .prod-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 260px; max-width: 320px; background: white; border: 1px solid #c8c6c4; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.14); overflow: hidden; }
+  .prod-search { display: block; width: 100%; padding: 9px 12px; border: none; border-bottom: 1px solid #edebe9; font-size: 13px; font-family: inherit; outline: none; color: var(--ms-text); background: #faf9f8; }
+  .prod-list { max-height: 260px; overflow-y: auto; }
+  .prod-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; font-size: 12px; user-select: none; transition: background 0.1s; }
+  .prod-item:hover { background: #E6F5EE; }
+  .prod-item input[type=checkbox] { accent-color: #00864F; width: 14px; height: 14px; flex-shrink: 0; cursor: pointer; }
+  .prod-item-label { flex: 1; color: var(--ms-text); }
+  .prod-item-count { font-size: 11px; color: var(--ms-text-muted); font-weight: 600; min-width: 26px; text-align: right; }
+  .prod-panel-footer { padding: 6px 12px; border-top: 1px solid #edebe9; font-size: 11px; color: var(--ms-text-muted); cursor: pointer; text-align: center; background: #faf9f8; }
+  .prod-panel-footer:hover { color: var(--ms-text); }
 </style>
 </head>
 <body>
 
 <nav class="topnav">
   <span class="topnav-brand">📋 M365 Updates</span>
-  <a href="index.html" class="active">Message Centre</a>
-  <a href="roadmap.html">Roadmap</a>
+  <a href="index.html" class="active">Message Centre Items</a>
+  <a href="roadmap.html">Roadmap Items</a>
+  <a href="timeline.html">Roadmap Timeline</a>
 </nav>
 
 <div class="header">
@@ -446,16 +526,23 @@
         <option value="0">All time</option>
       </select>
     </div>
-    <div class="filter-row">
+    <div class="filter-row" id="productFilterRow" style="flex-wrap:wrap">
       <span class="filter-label">Product:</span>
-      <button class="pill active" data-product="All" onclick="setProduct('All')">All<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate<span class="pill-count"></span></button>
-      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales<span class="pill-count"></span></button>
-      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central<span class="pill-count"></span></button>
+      <div class="prod-dropdown" id="prodDropdown">
+        <button class="prod-trigger" id="prodTrigger" type="button" onclick="toggleDropdown()">Products: All ▾</button>
+        <div class="prod-panel" id="prodPanel" style="display:none">
+          <input class="prod-search" id="prodSearch" type="text" placeholder="Search products…" oninput="filterDropdown()" autocomplete="off">
+          <div class="prod-list" id="prodList"></div>
+          <div class="prod-panel-footer" id="prodClearBtn" onclick="clearProducts()" style="display:none">✕ Clear all selections</div>
+        </div>
+      </div>
+      <div id="prodChips" class="prod-chips"></div>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Email:</span>
+      <input type="email" id="emailTo" class="email-input" placeholder="Recipient address…" autocomplete="off">
+      <button class="btn-send-email" id="btnSendEmail" onclick="sendEmail()">✉ Send items in view</button>
+      <span id="emailStatus" class="email-feedback"></span>
     </div>
   </div>
 </div>
@@ -478,6 +565,8 @@
 <div class="footer">
   Data sourced from <a href="https://mc.merill.net" target="_blank" style="color:var(--ms-blue)">mc.merill.net</a> — Microsoft 365 Message Centre archive
 </div>
+
+<div id="detailPanel" class="detail-panel" onmouseenter="dpCancelHide()" onmouseleave="dpStartHide()"></div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────
@@ -514,8 +603,11 @@ const PRODUCT_ICONS = {
 
 // ── STATE ───────────────────────────────────────────────────────────────
 let allItems = [];
-let activeProduct = 'All';
+let selectedProducts = loadProductPrefs();
 let lastFetchTime = null;
+let currentViewItems = [];
+let _prodKeys = [];
+let _prodCurrentCounts = {};
 
 // ── FETCH ────────────────────────────────────────────────────────────────
 async function loadData(forceRefresh = false) {
@@ -541,6 +633,7 @@ async function loadData(forceRefresh = false) {
     const data = await res.json();
     allItems = Array.isArray(data) ? data : (data.items || data.messages || []);
     lastFetchTime = new Date();
+    buildProductPills(allItems.filter(i => i.Id && i.Id.startsWith('MC')));
     renderAll();
   } catch (err) {
     showError(`Failed to load data: ${err.message}. <a href="${DATA_URL}" target="_blank" style="color:#c50f1f">Try opening the data source directly</a>.`);
@@ -569,14 +662,16 @@ function renderAll() {
     });
   }
 
-  // Assign products to each item
+  // Assign labels to each item: known products (matched on services, title,
+  // summary) plus any services that match no known product rule
   items = items.map(item => ({
     ...item,
     _products: getProducts(item),
+    _labels: getLabels(item),
   }));
 
-  // Keep only items matching target products
-  items = items.filter(item => item._products.length > 0);
+  // Drop items that can't be classified at all
+  items = items.filter(item => item._labels.length > 0);
 
   // Search filter
   if (query) {
@@ -588,12 +683,15 @@ function renderAll() {
     );
   }
 
-  // Update pill counts (after date + search, before product filter)
+  // Pill counts reflect the current date range + search, BEFORE the product
+  // filter — so each count answers "how many items if I select this pill"
   updatePillCounts(items);
 
-  // Product filter
-  if (activeProduct !== 'All') {
-    items = items.filter(item => item._products.includes(activeProduct));
+  // Product filter (multi-select)
+  if (selectedProducts.length > 0) {
+    items = items.filter(item =>
+      selectedProducts.some(sel => item._labels.includes(sel))
+    );
   }
 
   // Sort by date desc
@@ -602,6 +700,7 @@ function renderAll() {
     new Date(a.LastModifiedDateTime || a.StartDateTime)
   );
 
+  currentViewItems = items;
   updateStatusBar(items.length);
 
   if (items.length === 0) {
@@ -611,25 +710,23 @@ function renderAll() {
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
         <h3>No announcements found</h3>
         <p>No matching updates for the selected filters in the ${rangeLabel}.</p>
-        ${activeProduct !== 'All' || query ? '<p style="margin-top:6px">Try clearing filters or widening the date range.</p>' : ''}
+        ${selectedProducts.length > 0 || query ? '<p style="margin-top:6px">Try clearing filters or widening the date range.</p>' : ''}
       </div>`);
     return;
   }
 
-  // Group by product (when "All" is selected)
-  if (activeProduct === 'All') {
-    const sections = Object.keys(PRODUCT_RULES).map(product => {
-      const productItems = items.filter(i => i._products.includes(product));
-      return { product, items: productItems };
-    }).filter(s => s.items.length > 0);
+  // Group into sections by label. Known products come first (in rule order),
+  // then other services by item count. An item can appear in several sections.
+  const groupLabels = selectedProducts.length > 0
+    ? selectedProducts
+    : orderedLabels(items);
 
-    // For items shown in multiple sections, each section shows the item
-    const html = sections.map(s => renderSection(s.product, s.items, query)).join('');
-    setContent(html);
-  } else {
-    const html = renderSection(activeProduct, items, query);
-    setContent(html);
-  }
+  const sections = groupLabels.map(label => ({
+    label,
+    items: items.filter(i => i._labels.includes(label)),
+  })).filter(s => s.items.length > 0);
+
+  setContent(sections.map(s => renderSection(s.label, s.items, query)).join(''));
 
   updateHeaderSub();
 }
@@ -645,15 +742,151 @@ function getProducts(item) {
     .map(([product]) => product);
 }
 
-function updatePillCounts(items) {
-  document.querySelectorAll('.pill[data-product]').forEach(pill => {
-    const product = pill.dataset.product;
-    const countEl = pill.querySelector('.pill-count');
-    if (!countEl) return;
-    countEl.textContent = product === 'All'
-      ? items.length
-      : items.filter(i => i._products.includes(product)).length;
+// Labels = known products (matched via services/title/summary) plus any
+// services that match no known product rule. Used consistently for pill
+// counts, filtering and section grouping so the numbers always agree.
+function getLabels(item) {
+  const labels = new Set(getProducts(item));
+  (item.Services || []).forEach(svc => {
+    if (svc && !Object.values(PRODUCT_RULES).some(fn => fn(svc))) labels.add(svc);
   });
+  return [...labels];
+}
+
+// Known products first (rule order), then other labels by frequency
+function orderedLabels(items) {
+  const counts = {};
+  items.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+  const known = Object.keys(PRODUCT_RULES).filter(p => counts[p]);
+  const extra = Object.keys(counts).filter(l => !PRODUCT_RULES[l]).sort((a, b) => counts[b] - counts[a]);
+  return [...known, ...extra];
+}
+
+function buildProductPills(dataItems) {
+  const labelled = dataItems.map(item => ({ _labels: getLabels(item) }));
+  const counts = {};
+  labelled.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+
+  _prodKeys = [
+    ...Object.keys(PRODUCT_RULES).filter(p => counts[p]),
+    ...Object.keys(counts).filter(l => !PRODUCT_RULES[l] && counts[l] > 1).sort((a, b) => counts[b] - counts[a]),
+  ];
+  _prodCurrentCounts = { ...counts };
+
+  rebuildDropdownList(counts);
+  refreshDropdownState();
+}
+
+function rebuildDropdownList(counts) {
+  const list = document.getElementById('prodList');
+  if (!list) return;
+  const q = (document.getElementById('prodSearch')?.value || '').toLowerCase();
+  const keys = q ? _prodKeys.filter(k => k.toLowerCase().includes(q)) : _prodKeys;
+
+  if (!keys.length) {
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:#605e5c;font-size:12px">No products match</div>';
+    return;
+  }
+  list.innerHTML = keys.map(key => {
+    const c = counts[key] ?? 0;
+    return `<label class="prod-item">
+      <input type="checkbox"${selectedProducts.includes(key) ? ' checked' : ''} onchange="toggleProduct(${JSON.stringify(key)})">
+      <span class="prod-item-label">${esc(key)}</span>
+      <span class="prod-item-count" data-key="${esc(key)}">${c}</span>
+    </label>`;
+  }).join('');
+}
+
+function toggleProduct(key) {
+  const idx = selectedProducts.indexOf(key);
+  if (idx >= 0) selectedProducts.splice(idx, 1); else selectedProducts.push(key);
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function removeProduct(key) {
+  const idx = selectedProducts.indexOf(key);
+  if (idx >= 0) selectedProducts.splice(idx, 1);
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function clearProducts() {
+  selectedProducts = [];
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function toggleDropdown() {
+  const panel = document.getElementById('prodPanel');
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+  } else {
+    rebuildDropdownList(_prodCurrentCounts);
+    panel.style.display = 'block';
+    document.getElementById('prodSearch')?.focus();
+  }
+}
+
+function filterDropdown() {
+  rebuildDropdownList(_prodCurrentCounts);
+}
+
+function refreshDropdownState() {
+  const trigger = document.getElementById('prodTrigger');
+  const footer  = document.getElementById('prodClearBtn');
+  if (!trigger) return;
+  if (selectedProducts.length === 0) {
+    trigger.textContent = 'Products: All ▾';
+    trigger.classList.remove('has-selection');
+    if (footer) footer.style.display = 'none';
+  } else {
+    trigger.textContent = `Products: ${selectedProducts.length} selected ▾`;
+    trigger.classList.add('has-selection');
+    if (footer) footer.style.display = 'block';
+  }
+  const chips = document.getElementById('prodChips');
+  if (chips) {
+    chips.innerHTML = selectedProducts.map(key =>
+      `<span class="prod-chip">${esc(key)}<span class="prod-chip-x" onclick="removeProduct(${JSON.stringify(key)})" title="Remove">×</span></span>`
+    ).join('');
+  }
+  document.querySelectorAll('#prodList .prod-item input').forEach(cb => {
+    const lbl = cb.parentElement?.querySelector('.prod-item-label')?.textContent;
+    if (lbl !== undefined) cb.checked = selectedProducts.includes(lbl);
+  });
+}
+
+function refreshPillActive() { refreshDropdownState(); }
+
+function updatePillCounts(items) {
+  const liveCounts = {};
+  items.forEach(i => i._labels.forEach(l => liveCounts[l] = (liveCounts[l] || 0) + 1));
+  _prodCurrentCounts = liveCounts;
+  document.querySelectorAll('#prodList .prod-item-count').forEach(span => {
+    const key = span.dataset.key;
+    if (key !== undefined) span.textContent = liveCounts[key] ?? 0;
+  });
+}
+
+document.addEventListener('click', e => {
+  const dd = document.getElementById('prodDropdown');
+  if (dd && !dd.contains(e.target)) {
+    const panel = document.getElementById('prodPanel');
+    if (panel) panel.style.display = 'none';
+  }
+});
+
+function saveProductPrefs() {
+  try { localStorage.setItem('m365_products', JSON.stringify(selectedProducts)); } catch {}
+}
+
+function loadProductPrefs() {
+  try { return JSON.parse(localStorage.getItem('m365_products') || '[]'); } catch { return []; }
 }
 
 function renderSection(product, items, query) {
@@ -705,7 +938,7 @@ function renderCard(item, query) {
   ).join('');
 
   return `
-    <div class="card">
+    <div class="card" onmouseenter="dpCardEnter('${esc(id)}')" onmouseleave="dpStartHide()">
       <div class="card-header">
         <a class="card-title" href="${esc(url)}" target="_blank">${title}</a>
         <div class="badges">
@@ -758,14 +991,6 @@ function buildDatePills(tags, startDate) {
 }
 
 // ── UI HELPERS ───────────────────────────────────────────────────────────
-function setProduct(p) {
-  activeProduct = p;
-  document.querySelectorAll('.pill[data-product]').forEach(el => {
-    el.classList.toggle('active', el.dataset.product === p);
-  });
-  renderAll();
-}
-
 function setContent(html) {
   document.getElementById('content').innerHTML = html;
 }
@@ -786,7 +1011,7 @@ function updateStatusBar(count) {
   const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('statusText').innerHTML =
     `Showing <strong>${count}</strong> announcement${count !== 1 ? 's' : ''}` +
-    (activeProduct !== 'All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    (selectedProducts.length > 0 ? ` for <strong>${selectedProducts.join(', ')}</strong>` : '') +
     ` · ${rangeLabel}`;
   if (lastFetchTime) {
     document.getElementById('lastFetched').textContent =
@@ -803,11 +1028,14 @@ function updateHeaderSub() {
       const d = new Date(i.LastModifiedDateTime || i.StartDateTime);
       if (d < cutoff) return false;
     }
-    return getProducts(i).length > 0;
+    return getLabels(i).length > 0;
   });
   const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+  const productLabel = selectedProducts.length > 0
+    ? selectedProducts.join(', ')
+    : 'all products';
   document.getElementById('headerSub').textContent =
-    `${relevant.length} relevant updates · ${rangeLabel} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${relevant.length} relevant updates · ${rangeLabel} · ${productLabel}`;
 }
 
 function formatDate(iso) {
@@ -828,6 +1056,156 @@ function highlight(text, query) {
   const escaped = esc(text);
   const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
   return escaped.replace(re, '<mark>$1</mark>');
+}
+
+// ── DETAIL PANEL ─────────────────────────────────────────────────────────
+let _dpShowTimer = null;
+let _dpHideTimer = null;
+
+function dpCardEnter(id) {
+  clearTimeout(_dpHideTimer);
+  _dpHideTimer = null;
+  clearTimeout(_dpShowTimer);
+  _dpShowTimer = setTimeout(() => dpShow(id), 350);
+}
+
+function dpStartHide() {
+  clearTimeout(_dpShowTimer);
+  _dpHideTimer = setTimeout(() => {
+    const p = document.getElementById('detailPanel');
+    p.classList.remove('visible');
+    p.style.display = 'none';
+  }, 200);
+}
+
+function dpCancelHide() {
+  clearTimeout(_dpHideTimer);
+  _dpHideTimer = null;
+}
+
+function dpShow(id) {
+  const item = allItems.find(i => i.Id === id);
+  if (!item) return;
+  const panel = document.getElementById('detailPanel');
+
+  const url = item.Url || `https://mc.merill.net/message/${item.Id}`;
+  const adminUrl = `https://admin.microsoft.com/AdminPortal/home#/MessageCenter/:/messages/${item.Id}`;
+  const tags = item.Tags || [];
+  const services = item.Services || [];
+  const modDate = item.LastModifiedDateTime || item.StartDateTime;
+  const startDate = item.StartDateTime;
+  const statusTag = tags.find(t => ['Launched','In development','Rolling out','Preview','Cancelled'].includes(t));
+  const products = item._products || [];
+
+  const statusBadgeMap = {
+    'Launched':       `<span class="badge badge-launched">✓ Launched</span>`,
+    'Rolling out':    `<span class="badge badge-rolling">↗ Rolling out</span>`,
+    'In development': `<span class="badge badge-dev">⚙ In development</span>`,
+    'Preview':        `<span class="badge badge-preview">◎ Preview</span>`,
+    'Cancelled':      `<span class="badge badge-cancelled">✕ Cancelled</span>`,
+  };
+
+  const isMajor = item.IsMajorChange;
+  const isUpdated = (item.Title || '').startsWith('(Updated)');
+  const statusBadge = statusBadgeMap[statusTag] || '';
+  const majorBadge  = isMajor ? `<span class="badge badge-major">⚠ Major</span>` : '';
+  const updBadge    = isUpdated ? `<span class="badge badge-updated">↻ Updated</span>` : '';
+
+  // Sanitise summary HTML — allow basic formatting and images
+  const rawSummary = item.Summary || '';
+  const sanitized  = dpSanitize(rawSummary);
+
+  // Extra scope tags
+  const scopeTags = tags.filter(t =>
+    !['Launched','In development','Rolling out','Preview','Cancelled','General Availability','Preview'].includes(t) &&
+    !t.startsWith('20')
+  );
+
+  panel.innerHTML = `
+    <div class="dp-header">
+      <div class="dp-title"><a href="${esc(url)}" target="_blank">${esc(item.Title || 'Untitled')}</a></div>
+      <div class="dp-badges">${majorBadge}${updBadge}${statusBadge}</div>
+    </div>
+    <div class="dp-body">
+      <div class="dp-section">
+        <div class="dp-label">Details</div>
+        <div class="dp-meta-row"><span class="dp-meta-lbl">ID:</span><span style="font-family:monospace">${esc(item.Id||'')}</span></div>
+        ${modDate ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Updated:</span><span>${esc(formatDate(modDate))}</span></div>` : ''}
+        ${startDate && startDate !== modDate ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Start:</span><span>${esc(formatDate(startDate))}</span></div>` : ''}
+        ${products.length ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Products:</span><span>${esc(products.join(', '))}</span></div>` : ''}
+        ${services.length ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Services:</span><span>${esc(services.slice(0,5).join(', '))}</span></div>` : ''}
+      </div>
+      ${sanitized ? `<div class="dp-section"><div class="dp-label">Summary</div><div class="dp-summary">${sanitized}</div></div>` : ''}
+      ${scopeTags.length ? `<div class="dp-section"><div class="dp-label">Tags</div><div class="dp-tags">${scopeTags.map(t=>`<span class="dp-tag">${esc(t)}</span>`).join('')}</div></div>` : ''}
+    </div>
+    <div class="dp-footer">
+      <a class="dp-link" href="${esc(url)}" target="_blank">↗ mc.merill.net</a>
+      <a class="dp-link" href="${esc(adminUrl)}" target="_blank">↗ Admin Center</a>
+      <button class="dp-close" onclick="dpStartHide()" title="Close">×</button>
+    </div>`;
+
+  panel.classList.add('visible');
+}
+
+function dpSanitize(html) {
+  if (!html) return '';
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  d.querySelectorAll('script,style,iframe,object,embed,form').forEach(el => el.remove());
+  d.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+    });
+  });
+  return d.innerHTML;
+}
+
+// ── EMAIL ────────────────────────────────────────────────────────────────
+async function sendEmail() {
+  const input = document.getElementById('emailTo');
+  const to = input.value.trim();
+  const statusEl = document.getElementById('emailStatus');
+  const btn = document.getElementById('btnSendEmail');
+  statusEl.className = 'email-feedback';
+  statusEl.textContent = '';
+  if (!to) {
+    statusEl.className = 'email-feedback err';
+    statusEl.textContent = 'Enter a recipient address.';
+    return;
+  }
+  if (!currentViewItems.length) {
+    statusEl.className = 'email-feedback err';
+    statusEl.textContent = 'No items currently in view.';
+    return;
+  }
+  btn.disabled = true;
+  statusEl.textContent = 'Sending…';
+  const payload = currentViewItems.map(item => ({
+    id: item.Id || '',
+    title: item.Title || '',
+    summary: (item.Summary || '').replace(/<[^>]+>/g, '').substring(0, 400),
+    status: (item.Tags || []).find(t => ['Launched','Rolling out','Preview','In development','Cancelled'].includes(t)) || '',
+    url: item.Url || `https://mc.merill.net/message/${item.Id}`,
+    date: item.LastModifiedDateTime || item.StartDateTime || '',
+    products: item._products || [],
+  }));
+  try {
+    const res = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, pageTitle: 'M365 Message Centre Items', items: payload }),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(text);
+    statusEl.className = 'email-feedback ok';
+    statusEl.textContent = `✓ Sent ${payload.length} item${payload.length !== 1 ? 's' : ''} to ${to}`;
+    input.value = '';
+  } catch (err) {
+    statusEl.className = 'email-feedback err';
+    statusEl.textContent = '✕ ' + (err.message || 'Failed to send.');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────

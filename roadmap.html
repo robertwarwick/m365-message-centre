@@ -402,14 +402,95 @@
     .controls-inner, .main { padding-left: 12px; padding-right: 12px; }
     .search-row { flex-direction: column; }
   }
+
+  /* ── EMAIL ROW ── */
+  .email-input { padding: 5px 10px; border: 1px solid #c8c6c4; border-radius: 4px; font-size: 12px; font-family: inherit; outline: none; width: 220px; transition: border-color 0.15s; color: var(--ms-text); }
+  .email-input:focus { border-color: var(--ms-purple); }
+  .btn-send-email { padding: 5px 14px; border-radius: 4px; border: 1px solid var(--ms-purple); background: var(--ms-purple); color: white; font-size: 12px; font-family: inherit; cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap; }
+  .btn-send-email:hover { background: #006640; border-color: #006640; }
+  .btn-send-email:disabled { opacity: 0.6; cursor: not-allowed; }
+  .email-feedback { font-size: 12px; margin-left: 4px; }
+  .email-feedback.ok { color: #107C10; }
+  .email-feedback.err { color: #c50f1f; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 380px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--ms-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+  }
+  .detail-panel.visible { display: flex; animation: dpSlideIn 0.15s ease; }
+  @keyframes dpSlideIn {
+    from { opacity: 0; transform: translateY(-50%) translateX(14px); }
+    to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+  }
+  .dp-header {
+    background: var(--ms-purple);
+    color: white;
+    padding: 14px 16px;
+    border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+  }
+  .dp-title { font-size: 14px; font-weight: 600; line-height: 1.35; margin-bottom: 8px; }
+  .dp-title a { color: white; text-decoration: none; }
+  .dp-title a:hover { text-decoration: underline; }
+  .dp-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dp-body { padding: 14px 16px; font-size: 13px; color: var(--ms-text); }
+  .dp-section { margin-bottom: 12px; }
+  .dp-label { font-size: 11px; font-weight: 600; color: var(--ms-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .dp-summary { line-height: 1.6; color: var(--ms-text); }
+  .dp-summary img { max-width: 100%; border-radius: 4px; margin: 6px 0; display: block; }
+  .dp-summary a { color: var(--ms-purple); }
+  .dp-meta-row { display: flex; gap: 8px; font-size: 12px; margin-bottom: 4px; color: var(--ms-text-muted); }
+  .dp-meta-lbl { font-weight: 600; color: var(--ms-text); white-space: nowrap; }
+  .dp-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .dp-tag { background: var(--ms-grey-light); border: 1px solid var(--ms-border); padding: 2px 8px; border-radius: 4px; font-size: 11px; color: var(--ms-text-muted); }
+  .dp-footer { padding: 10px 16px; border-top: 1px solid var(--ms-border); display: flex; gap: 12px; flex-shrink: 0; align-items: center; }
+  .dp-link { color: var(--ms-purple); font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+  .dp-link:hover { text-decoration: underline; }
+  .dp-progress { margin-bottom: 12px; }
+  .dp-close { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--ms-text-muted); font-size: 18px; line-height: 1; padding: 0 2px; }
+  .dp-close:hover { color: var(--ms-text); }
+
+  /* ── PRODUCT DROPDOWN ── */
+  .prod-dropdown { position: relative; display: inline-flex; align-items: center; }
+  .prod-trigger { padding: 5px 12px; border: 1px solid #c8c6c4; border-radius: 16px; font-size: 12px; cursor: pointer; background: white; color: var(--ms-text); font-family: inherit; transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+  .prod-trigger:hover { border-color: #00864F; color: #00864F; }
+  .prod-trigger.has-selection { background: #00864F; border-color: #00864F; color: white; }
+  .prod-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .prod-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px 2px 10px; background: #E6F5EE; color: #00864F; border-radius: 10px; font-size: 11px; font-weight: 500; border: 1px solid rgba(0,134,79,0.25); }
+  .prod-chip-x { cursor: pointer; opacity: 0.55; line-height: 1; font-size: 14px; margin-left: 1px; }
+  .prod-chip-x:hover { opacity: 1; }
+  .prod-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 260px; max-width: 320px; background: white; border: 1px solid #c8c6c4; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.14); overflow: hidden; }
+  .prod-search { display: block; width: 100%; padding: 9px 12px; border: none; border-bottom: 1px solid #edebe9; font-size: 13px; font-family: inherit; outline: none; color: var(--ms-text); background: #faf9f8; }
+  .prod-list { max-height: 260px; overflow-y: auto; }
+  .prod-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; font-size: 12px; user-select: none; transition: background 0.1s; }
+  .prod-item:hover { background: #E6F5EE; }
+  .prod-item input[type=checkbox] { accent-color: #00864F; width: 14px; height: 14px; flex-shrink: 0; cursor: pointer; }
+  .prod-item-label { flex: 1; color: var(--ms-text); }
+  .prod-item-count { font-size: 11px; color: var(--ms-text-muted); font-weight: 600; min-width: 26px; text-align: right; }
+  .prod-panel-footer { padding: 6px 12px; border-top: 1px solid #edebe9; font-size: 11px; color: var(--ms-text-muted); cursor: pointer; text-align: center; background: #faf9f8; }
+  .prod-panel-footer:hover { color: var(--ms-text); }
 </style>
 </head>
 <body>
 
 <nav class="topnav">
   <span class="topnav-brand">📋 M365 Updates</span>
-  <a href="index.html">Message Centre</a>
-  <a href="roadmap.html" class="active">Roadmap</a>
+  <a href="index.html">Message Centre Items</a>
+  <a href="roadmap.html" class="active">Roadmap Items</a>
+  <a href="timeline.html">Roadmap Timeline</a>
 </nav>
 
 <div class="header">
@@ -441,16 +522,17 @@
         <option value="0">All time</option>
       </select>
     </div>
-    <div class="filter-row">
+    <div class="filter-row" id="productFilterRow" style="flex-wrap:wrap">
       <span class="filter-label">Product:</span>
-      <button class="pill active" data-product="All" onclick="setProduct('All')">All<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate<span class="pill-count"></span></button>
-      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales<span class="pill-count"></span></button>
-      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central<span class="pill-count"></span></button>
+      <div class="prod-dropdown" id="prodDropdown">
+        <button class="prod-trigger" id="prodTrigger" type="button" onclick="toggleDropdown()">Products: All ▾</button>
+        <div class="prod-panel" id="prodPanel" style="display:none">
+          <input class="prod-search" id="prodSearch" type="text" placeholder="Search products…" oninput="filterDropdown()" autocomplete="off">
+          <div class="prod-list" id="prodList"></div>
+          <div class="prod-panel-footer" id="prodClearBtn" onclick="clearProducts()" style="display:none">✕ Clear all selections</div>
+        </div>
+      </div>
+      <div id="prodChips" class="prod-chips"></div>
     </div>
     <div class="filter-row">
       <span class="filter-label">Status:</span>
@@ -460,6 +542,12 @@
       <button class="status-pill" data-status="Preview" onclick="setStatus('Preview')">◎ Preview</button>
       <button class="status-pill" data-status="In development" onclick="setStatus('In development')">⚙ In development</button>
       <button class="status-pill" data-status="Cancelled" onclick="setStatus('Cancelled')">✕ Cancelled</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Email:</span>
+      <input type="email" id="emailTo" class="email-input" placeholder="Recipient address…" autocomplete="off">
+      <button class="btn-send-email" id="btnSendEmail" onclick="sendEmail()">✉ Send items in view</button>
+      <span id="emailStatus" class="email-feedback"></span>
     </div>
   </div>
 </div>
@@ -474,7 +562,7 @@
     <div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
       <h3>Loading…</h3>
-      <p>Fetching roadmap from Microsoft</p>
+      <p>Fetching roadmap from mc.merill.net</p>
     </div>
   </div>
 </div>
@@ -483,8 +571,10 @@
   Data sourced from <a href="https://www.microsoft.com/microsoft-365/roadmap" target="_blank" style="color:var(--ms-purple)">Microsoft 365 Roadmap</a>
 </div>
 
+<div id="detailPanel" class="detail-panel" onmouseenter="dpCancelHide()" onmouseleave="dpStartHide()"></div>
+
 <script>
-const RSS_URL = 'https://www.microsoft.com/releasecommunications/api/v2/m365/rss';
+const DATA_URL = 'https://mc.merill.net/messages-index.json';
 
 const MONTH_MAP = {
   january:1,february:2,march:3,april:4,may:5,june:6,
@@ -503,32 +593,12 @@ function parseCYDate(str) {
   if (yM) return new Date(parseInt(yM[1]),11,1);
   return null;
 }
-function parseDescription(raw) {
-  const text = raw.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
-                   .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').trim();
+function extractGADate(summary) {
+  if (!summary) return null;
+  const text = summary.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+                       .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').trim();
   const gM = text.match(/GA date:\s*(.+?)(?:\n|$)/i);
-  const gaDate = gM ? parseCYDate(gM[1].trim()) : null;
-  const summary = text.replace(/\n?GA date:.+$/im,'').trim();
-  return { summary, gaDate };
-}
-function parseRSSItem(node) {
-  const getText = sel => node.querySelector(sel)?.textContent?.trim() || '';
-  const categories = [...node.querySelectorAll('category')].map(c => c.textContent.trim());
-  const { summary, gaDate } = parseDescription(getText('description'));
-  let lastMod = '';
-  for (const el of node.getElementsByTagName('*')) { if (el.localName==='updated') { lastMod=el.textContent.trim(); break; } }
-  return {
-    Id: 'RM' + getText('guid'),
-    Title: getText('title'),
-    Summary: summary,
-    Tags: categories,
-    Services: categories,
-    Url: getText('link'),
-    StartDateTime: getText('pubDate') ? new Date(getText('pubDate')).toISOString() : '',
-    LastModifiedDateTime: lastMod,
-    IsMajorChange: false,
-    _gaDate: gaDate,
-  };
+  return gM ? parseCYDate(gM[1].trim()) : null;
 }
 
 const PRODUCT_RULES = {
@@ -558,9 +628,12 @@ const STATUS_PROGRESS = {
 };
 
 let allItems = [];
-let activeProduct = 'All';
+let selectedProducts = loadProductPrefs();
 let activeStatus = 'All';
 let lastFetchTime = null;
+let currentViewItems = [];
+let _prodKeys = [];
+let _prodCurrentCounts = {};
 
 async function loadData(forceRefresh = false) {
   const btn = document.getElementById('btnRefresh');
@@ -571,17 +644,18 @@ async function loadData(forceRefresh = false) {
   setContent(`
     <div class="state-msg">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      <h3>Fetching roadmap…</h3><p>Loading from Microsoft</p>
+      <h3>Fetching roadmap…</h3><p>Loading from mc.merill.net</p>
     </div>`);
   try {
-    const url = RSS_URL + (forceRefresh ? '?t=' + Date.now() : '');
-    const res = await fetch(url);
+    const res = await fetch(DATA_URL + (forceRefresh ? '?t=' + Date.now() : ''), {
+      cache: forceRefresh ? 'reload' : 'default'
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    const text = await res.text();
-    const xml = new DOMParser().parseFromString(text, 'application/xml');
-    if (xml.querySelector('parsererror')) throw new Error('XML parse error');
-    allItems = [...xml.querySelectorAll('item')].map(parseRSSItem);
+    const data = await res.json();
+    const raw = Array.isArray(data) ? data : (data.items || data.messages || []);
+    allItems = raw.map(i => ({ ...i, _gaDate: extractGADate(i.Summary || '') }));
     lastFetchTime = new Date();
+    buildProductPills(allItems.filter(i => i.Id && i.Id.startsWith('RM')));
     renderAll();
   } catch (err) {
     showError(`Failed to load data: ${err.message}.`);
@@ -608,11 +682,12 @@ function renderAll() {
     });
   }
 
-  // Attach products
-  items = items.map(item => ({ ...item, _products: getProducts(item) }));
+  // Assign labels: known products (matched on services/title/summary) plus
+  // any services that match no known product rule
+  items = items.map(item => ({ ...item, _products: getProducts(item), _labels: getLabels(item) }));
 
-  // Keep only target-product items
-  items = items.filter(item => item._products.length > 0);
+  // Drop items that can't be classified at all
+  items = items.filter(item => item._labels.length > 0);
 
   // Status filter
   if (activeStatus !== 'All') {
@@ -629,12 +704,14 @@ function renderAll() {
     );
   }
 
-  // Update pill counts (after date + status + search, before product filter)
+  // Pill counts reflect current date/status/search, BEFORE the product filter
   updatePillCounts(items);
 
-  // Product filter
-  if (activeProduct !== 'All') {
-    items = items.filter(item => item._products.includes(activeProduct));
+  // Product filter (multi-select)
+  if (selectedProducts.length > 0) {
+    items = items.filter(item =>
+      selectedProducts.some(sel => item._labels.includes(sel))
+    );
   }
 
   // Sort: In development / Rolling out first, then by date desc
@@ -649,6 +726,7 @@ function renderAll() {
            new Date(a.LastModifiedDateTime || a.StartDateTime);
   });
 
+  currentViewItems = items;
   updateStatusBar(items);
 
   if (items.length === 0) {
@@ -662,15 +740,17 @@ function renderAll() {
     return;
   }
 
-  if (activeProduct === 'All') {
-    const sections = Object.keys(PRODUCT_RULES).map(product => ({
-      product,
-      items: items.filter(i => i._products.includes(product)),
-    })).filter(s => s.items.length > 0);
-    setContent(sections.map(s => renderSection(s.product, s.items, query)).join(''));
-  } else {
-    setContent(renderSection(activeProduct, items, query));
-  }
+  // Group into sections by label; known products first, then by frequency
+  const groupLabels = selectedProducts.length > 0
+    ? selectedProducts
+    : orderedLabels(items);
+
+  const sections = groupLabels.map(label => ({
+    label,
+    items: items.filter(i => i._labels.includes(label)),
+  })).filter(s => s.items.length > 0);
+
+  setContent(sections.map(s => renderSection(s.label, s.items, query)).join(''));
 
   updateHeaderSub(items.length);
 }
@@ -689,15 +769,151 @@ function getProducts(item) {
     .map(([p]) => p);
 }
 
-function updatePillCounts(items) {
-  document.querySelectorAll('.pill[data-product]').forEach(pill => {
-    const product = pill.dataset.product;
-    const countEl = pill.querySelector('.pill-count');
-    if (!countEl) return;
-    countEl.textContent = product === 'All'
-      ? items.length
-      : items.filter(i => i._products.includes(product)).length;
+// Labels = known products (matched via services/title/summary) plus any
+// services that match no known product rule. Used consistently for pill
+// counts, filtering and section grouping so the numbers always agree.
+function getLabels(item) {
+  const labels = new Set(getProducts(item));
+  (item.Services || []).forEach(svc => {
+    if (svc && !Object.values(PRODUCT_RULES).some(fn => fn(svc))) labels.add(svc);
   });
+  return [...labels];
+}
+
+// Known products first (rule order), then other labels by frequency
+function orderedLabels(items) {
+  const counts = {};
+  items.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+  const known = Object.keys(PRODUCT_RULES).filter(p => counts[p]);
+  const extra = Object.keys(counts).filter(l => !PRODUCT_RULES[l]).sort((a, b) => counts[b] - counts[a]);
+  return [...known, ...extra];
+}
+
+function buildProductPills(dataItems) {
+  const labelled = dataItems.map(item => ({ _labels: getLabels(item) }));
+  const counts = {};
+  labelled.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+
+  _prodKeys = [
+    ...Object.keys(PRODUCT_RULES).filter(p => counts[p]),
+    ...Object.keys(counts).filter(l => !PRODUCT_RULES[l] && counts[l] > 1).sort((a, b) => counts[b] - counts[a]),
+  ];
+  _prodCurrentCounts = { ...counts };
+
+  rebuildDropdownList(counts);
+  refreshDropdownState();
+}
+
+function rebuildDropdownList(counts) {
+  const list = document.getElementById('prodList');
+  if (!list) return;
+  const q = (document.getElementById('prodSearch')?.value || '').toLowerCase();
+  const keys = q ? _prodKeys.filter(k => k.toLowerCase().includes(q)) : _prodKeys;
+
+  if (!keys.length) {
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:#605e5c;font-size:12px">No products match</div>';
+    return;
+  }
+  list.innerHTML = keys.map(key => {
+    const c = counts[key] ?? 0;
+    return `<label class="prod-item">
+      <input type="checkbox"${selectedProducts.includes(key) ? ' checked' : ''} onchange="toggleProduct(${JSON.stringify(key)})">
+      <span class="prod-item-label">${esc(key)}</span>
+      <span class="prod-item-count" data-key="${esc(key)}">${c}</span>
+    </label>`;
+  }).join('');
+}
+
+function toggleProduct(key) {
+  const idx = selectedProducts.indexOf(key);
+  if (idx >= 0) selectedProducts.splice(idx, 1); else selectedProducts.push(key);
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function removeProduct(key) {
+  const idx = selectedProducts.indexOf(key);
+  if (idx >= 0) selectedProducts.splice(idx, 1);
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function clearProducts() {
+  selectedProducts = [];
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function toggleDropdown() {
+  const panel = document.getElementById('prodPanel');
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+  } else {
+    rebuildDropdownList(_prodCurrentCounts);
+    panel.style.display = 'block';
+    document.getElementById('prodSearch')?.focus();
+  }
+}
+
+function filterDropdown() {
+  rebuildDropdownList(_prodCurrentCounts);
+}
+
+function refreshDropdownState() {
+  const trigger = document.getElementById('prodTrigger');
+  const footer  = document.getElementById('prodClearBtn');
+  if (!trigger) return;
+  if (selectedProducts.length === 0) {
+    trigger.textContent = 'Products: All ▾';
+    trigger.classList.remove('has-selection');
+    if (footer) footer.style.display = 'none';
+  } else {
+    trigger.textContent = `Products: ${selectedProducts.length} selected ▾`;
+    trigger.classList.add('has-selection');
+    if (footer) footer.style.display = 'block';
+  }
+  const chips = document.getElementById('prodChips');
+  if (chips) {
+    chips.innerHTML = selectedProducts.map(key =>
+      `<span class="prod-chip">${esc(key)}<span class="prod-chip-x" onclick="removeProduct(${JSON.stringify(key)})" title="Remove">×</span></span>`
+    ).join('');
+  }
+  document.querySelectorAll('#prodList .prod-item input').forEach(cb => {
+    const lbl = cb.parentElement?.querySelector('.prod-item-label')?.textContent;
+    if (lbl !== undefined) cb.checked = selectedProducts.includes(lbl);
+  });
+}
+
+function refreshPillActive() { refreshDropdownState(); }
+
+function updatePillCounts(items) {
+  const liveCounts = {};
+  items.forEach(i => i._labels.forEach(l => liveCounts[l] = (liveCounts[l] || 0) + 1));
+  _prodCurrentCounts = liveCounts;
+  document.querySelectorAll('#prodList .prod-item-count').forEach(span => {
+    const key = span.dataset.key;
+    if (key !== undefined) span.textContent = liveCounts[key] ?? 0;
+  });
+}
+
+document.addEventListener('click', e => {
+  const dd = document.getElementById('prodDropdown');
+  if (dd && !dd.contains(e.target)) {
+    const panel = document.getElementById('prodPanel');
+    if (panel) panel.style.display = 'none';
+  }
+});
+
+function saveProductPrefs() {
+  try { localStorage.setItem('m365_products', JSON.stringify(selectedProducts)); } catch {}
+}
+
+function loadProductPrefs() {
+  try { return JSON.parse(localStorage.getItem('m365_products') || '[]'); } catch { return []; }
 }
 
 function renderSection(product, items, query) {
@@ -752,7 +968,7 @@ function renderCard(item, query) {
   const metaDate = modDate ? `Updated ${formatDate(modDate)}` : (startDate ? formatDate(startDate) : '');
 
   return `
-    <div class="card">
+    <div class="card" onmouseenter="dpCardEnter('${esc(id)}')" onmouseleave="dpStartHide()">
       <div class="card-header">
         <a class="card-title" href="${esc(url)}" target="_blank">${title}</a>
         <div class="badges">${majorBadge}${statusBadge}</div>
@@ -782,13 +998,6 @@ function renderCard(item, query) {
     </div>`;
 }
 
-function setProduct(p) {
-  activeProduct = p;
-  document.querySelectorAll('.pill[data-product]').forEach(el => {
-    el.classList.toggle('active', el.dataset.product === p);
-  });
-  renderAll();
-}
 
 function setStatus(s) {
   activeStatus = s;
@@ -815,7 +1024,7 @@ function updateStatusBar(items) {
   const summary = Object.entries(counts).map(([s,n]) => `${n} ${s.toLowerCase()}`).join(' · ');
   document.getElementById('statusText').innerHTML =
     `<strong>${items.length}</strong> item${items.length !== 1 ? 's' : ''}` +
-    (activeProduct !== 'All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    (selectedProducts.length > 0 ? ` · ${selectedProducts.length} product${selectedProducts.length!==1?'s':''} selected` : '') +
     ` · ${rangeLabel}` +
     (summary ? ` <span style="color:#8a8886;font-size:11px">(${summary})</span>` : '');
   if (lastFetchTime) {
@@ -826,7 +1035,8 @@ function updateStatusBar(items) {
 function updateHeaderSub(count) {
   const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('headerSub').textContent =
-    `${count} roadmap entries · ${rangeLabel} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${count} roadmap entries · ${rangeLabel}` +
+    (selectedProducts.length > 0 ? ` · ${selectedProducts.join(', ')}` : ' · all products');
 }
 
 function setContent(html) { document.getElementById('content').innerHTML = html; }
@@ -847,6 +1057,164 @@ function highlight(text, query) {
   if (!query || query.length < 2) return esc(text);
   const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
   return esc(text).replace(re, '<mark>$1</mark>');
+}
+
+// ── DETAIL PANEL ─────────────────────────────────────────────────────────
+let _dpShowTimer = null;
+let _dpHideTimer = null;
+
+function dpCardEnter(id) {
+  clearTimeout(_dpHideTimer);
+  _dpHideTimer = null;
+  clearTimeout(_dpShowTimer);
+  _dpShowTimer = setTimeout(() => dpShow(id), 350);
+}
+
+function dpStartHide() {
+  clearTimeout(_dpShowTimer);
+  _dpHideTimer = setTimeout(() => {
+    const p = document.getElementById('detailPanel');
+    p.classList.remove('visible');
+    p.style.display = 'none';
+  }, 200);
+}
+
+function dpCancelHide() {
+  clearTimeout(_dpHideTimer);
+  _dpHideTimer = null;
+}
+
+function dpShow(id) {
+  const item = allItems.find(i => i.Id === id);
+  if (!item) return;
+  const panel = document.getElementById('detailPanel');
+
+  const url = item.Url || `https://www.microsoft.com/microsoft-365/roadmap?id=${(item.Id||'').replace('RM','')}`;
+  const tags = item.Tags || [];
+  const services = item.Services || [];
+  const modDate = item.LastModifiedDateTime;
+  const startDate = item.StartDateTime;
+  const primaryStatus = getPrimaryStatus(tags);
+  const progress = STATUS_PROGRESS[primaryStatus] ?? 0;
+  const progressClass = primaryStatus.toLowerCase().replace(/\s+/g,'');
+  const products = item._products || [];
+
+  const statusBadgeMap = {
+    'Launched':       `<span class="badge badge-launched">✓ Launched</span>`,
+    'Rolling out':    `<span class="badge badge-rolling">↗ Rolling out</span>`,
+    'In development': `<span class="badge badge-dev">⚙ In development</span>`,
+    'Preview':        `<span class="badge badge-preview">◎ Preview</span>`,
+    'Cancelled':      `<span class="badge badge-cancelled">✕ Cancelled</span>`,
+  };
+  const statusBadge = statusBadgeMap[primaryStatus] || '';
+  const majorBadge  = item.IsMajorChange ? `<span class="badge badge-major">⚠ Major</span>` : '';
+
+  const gaDateStr = item._gaDate
+    ? item._gaDate.toLocaleDateString('en-GB',{month:'short',year:'numeric'})
+    : '';
+
+  const rawSummary = item.Summary || '';
+  const sanitized  = dpSanitize(rawSummary);
+
+  const scopeTags = tags.filter(t =>
+    !['Launched','In development','Rolling out','Preview','Cancelled','General Availability'].includes(t)
+  );
+
+  panel.innerHTML = `
+    <div class="dp-header">
+      <div class="dp-title"><a href="${esc(url)}" target="_blank">${esc(item.Title || 'Untitled')}</a></div>
+      <div class="dp-badges">${majorBadge}${statusBadge}</div>
+    </div>
+    <div class="dp-body">
+      <div class="dp-section">
+        <div class="dp-label">Details</div>
+        <div class="dp-meta-row"><span class="dp-meta-lbl">ID:</span><span style="font-family:monospace">${esc(item.Id||'')}</span></div>
+        ${gaDateStr ? `<div class="dp-meta-row"><span class="dp-meta-lbl">GA date:</span><span>${esc(gaDateStr)}</span></div>` : ''}
+        ${modDate ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Updated:</span><span>${esc(formatDate(modDate))}</span></div>` : ''}
+        ${products.length ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Products:</span><span>${esc(products.join(', '))}</span></div>` : ''}
+        ${services.length ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Services:</span><span>${esc(services.filter(s=>!['Launched','In development','Rolling out','Preview','Cancelled','General Availability'].includes(s)).slice(0,5).join(', '))}</span></div>` : ''}
+      </div>
+      ${primaryStatus !== 'Launched' && primaryStatus !== 'Cancelled' ? `
+      <div class="dp-progress">
+        <div class="dp-label">Progress</div>
+        <div class="timeline-bar">
+          <span style="font-size:12px">${esc(primaryStatus)}</span>
+          <div class="timeline-track" style="max-width:none;flex:1">
+            <div class="timeline-fill ${esc(progressClass)}" style="width:${progress}%"></div>
+          </div>
+          <span style="font-size:12px">${progress}%</span>
+        </div>
+      </div>` : ''}
+      ${sanitized ? `<div class="dp-section"><div class="dp-label">Summary</div><div class="dp-summary">${sanitized}</div></div>` : ''}
+      ${scopeTags.length ? `<div class="dp-section"><div class="dp-label">Tags</div><div class="dp-tags">${scopeTags.map(t=>`<span class="dp-tag">${esc(t)}</span>`).join('')}</div></div>` : ''}
+    </div>
+    <div class="dp-footer">
+      <a class="dp-link" href="${esc(url)}" target="_blank">↗ Microsoft Roadmap</a>
+      <button class="dp-close" onclick="dpStartHide()" title="Close">×</button>
+    </div>`;
+
+  panel.classList.add('visible');
+}
+
+function dpSanitize(html) {
+  if (!html) return '';
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  d.querySelectorAll('script,style,iframe,object,embed,form').forEach(el => el.remove());
+  d.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+    });
+  });
+  return d.innerHTML;
+}
+
+// ── EMAIL ────────────────────────────────────────────────────────────────
+async function sendEmail() {
+  const input = document.getElementById('emailTo');
+  const to = input.value.trim();
+  const statusEl = document.getElementById('emailStatus');
+  const btn = document.getElementById('btnSendEmail');
+  statusEl.className = 'email-feedback';
+  statusEl.textContent = '';
+  if (!to) {
+    statusEl.className = 'email-feedback err';
+    statusEl.textContent = 'Enter a recipient address.';
+    return;
+  }
+  if (!currentViewItems.length) {
+    statusEl.className = 'email-feedback err';
+    statusEl.textContent = 'No items currently in view.';
+    return;
+  }
+  btn.disabled = true;
+  statusEl.textContent = 'Sending…';
+  const payload = currentViewItems.map(item => ({
+    id: item.Id || '',
+    title: item.Title || '',
+    summary: (item.Summary || '').replace(/<[^>]+>/g, '').substring(0, 400),
+    status: getPrimaryStatus(item.Tags || ''),
+    url: item.Url || `https://www.microsoft.com/microsoft-365/roadmap?id=${(item.Id || '').replace('RM', '')}`,
+    date: item.LastModifiedDateTime || item.StartDateTime || '',
+    products: item._products || [],
+  }));
+  try {
+    const res = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, pageTitle: 'M365 Roadmap Items', items: payload }),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(text);
+    statusEl.className = 'email-feedback ok';
+    statusEl.textContent = `✓ Sent ${payload.length} item${payload.length !== 1 ? 's' : ''} to ${to}`;
+    input.value = '';
+  } catch (err) {
+    statusEl.className = 'email-feedback err';
+    statusEl.textContent = '✕ ' + (err.message || 'Failed to send.');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 loadData();
