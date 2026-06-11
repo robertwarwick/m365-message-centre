@@ -466,6 +466,26 @@
   .dp-link:hover { text-decoration: underline; }
   .dp-close { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--ms-text-muted); font-size: 18px; line-height: 1; padding: 0 2px; }
   .dp-close:hover { color: var(--ms-text); }
+
+  /* ── PRODUCT DROPDOWN ── */
+  .prod-dropdown { position: relative; display: inline-flex; align-items: center; }
+  .prod-trigger { padding: 5px 12px; border: 1px solid #c8c6c4; border-radius: 16px; font-size: 12px; cursor: pointer; background: white; color: var(--ms-text); font-family: inherit; transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+  .prod-trigger:hover { border-color: #00864F; color: #00864F; }
+  .prod-trigger.has-selection { background: #00864F; border-color: #00864F; color: white; }
+  .prod-chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .prod-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px 2px 10px; background: #E6F5EE; color: #00864F; border-radius: 10px; font-size: 11px; font-weight: 500; border: 1px solid rgba(0,134,79,0.25); }
+  .prod-chip-x { cursor: pointer; opacity: 0.55; line-height: 1; font-size: 14px; margin-left: 1px; }
+  .prod-chip-x:hover { opacity: 1; }
+  .prod-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 260px; max-width: 320px; background: white; border: 1px solid #c8c6c4; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.14); overflow: hidden; }
+  .prod-search { display: block; width: 100%; padding: 9px 12px; border: none; border-bottom: 1px solid #edebe9; font-size: 13px; font-family: inherit; outline: none; color: var(--ms-text); background: #faf9f8; }
+  .prod-list { max-height: 260px; overflow-y: auto; }
+  .prod-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; cursor: pointer; font-size: 12px; user-select: none; transition: background 0.1s; }
+  .prod-item:hover { background: #E6F5EE; }
+  .prod-item input[type=checkbox] { accent-color: #00864F; width: 14px; height: 14px; flex-shrink: 0; cursor: pointer; }
+  .prod-item-label { flex: 1; color: var(--ms-text); }
+  .prod-item-count { font-size: 11px; color: var(--ms-text-muted); font-weight: 600; min-width: 26px; text-align: right; }
+  .prod-panel-footer { padding: 6px 12px; border-top: 1px solid #edebe9; font-size: 11px; color: var(--ms-text-muted); cursor: pointer; text-align: center; background: #faf9f8; }
+  .prod-panel-footer:hover { color: var(--ms-text); }
 </style>
 </head>
 <body>
@@ -508,6 +528,15 @@
     </div>
     <div class="filter-row" id="productFilterRow" style="flex-wrap:wrap">
       <span class="filter-label">Product:</span>
+      <div class="prod-dropdown" id="prodDropdown">
+        <button class="prod-trigger" id="prodTrigger" type="button" onclick="toggleDropdown()">Products: All ▾</button>
+        <div class="prod-panel" id="prodPanel" style="display:none">
+          <input class="prod-search" id="prodSearch" type="text" placeholder="Search products…" oninput="filterDropdown()" autocomplete="off">
+          <div class="prod-list" id="prodList"></div>
+          <div class="prod-panel-footer" id="prodClearBtn" onclick="clearProducts()" style="display:none">✕ Clear all selections</div>
+        </div>
+      </div>
+      <div id="prodChips" class="prod-chips"></div>
     </div>
     <div class="filter-row">
       <span class="filter-label">Email:</span>
@@ -577,6 +606,8 @@ let allItems = [];
 let selectedProducts = loadProductPrefs();
 let lastFetchTime = null;
 let currentViewItems = [];
+let _prodKeys = [];
+let _prodCurrentCounts = {};
 
 // ── FETCH ────────────────────────────────────────────────────────────────
 async function loadData(forceRefresh = false) {
@@ -736,55 +767,119 @@ function buildProductPills(dataItems) {
   const counts = {};
   labelled.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
 
-  const keys = [
+  _prodKeys = [
     ...Object.keys(PRODUCT_RULES).filter(p => counts[p]),
     ...Object.keys(counts).filter(l => !PRODUCT_RULES[l] && counts[l] > 1).sort((a, b) => counts[b] - counts[a]),
   ];
+  _prodCurrentCounts = { ...counts };
 
-  const row = document.getElementById('productFilterRow');
-  row.innerHTML = '<span class="filter-label">Product:</span>';
+  rebuildDropdownList(counts);
+  refreshDropdownState();
+}
 
-  const allBtn = document.createElement('button');
-  allBtn.className = 'pill' + (selectedProducts.length === 0 ? ' active' : '');
-  allBtn.dataset.key = '';
-  allBtn.innerHTML = `All<span class="pill-count">${labelled.length}</span>`;
-  allBtn.onclick = () => { selectedProducts = []; saveProductPrefs(); refreshPillActive(); renderAll(); };
-  row.appendChild(allBtn);
+function rebuildDropdownList(counts) {
+  const list = document.getElementById('prodList');
+  if (!list) return;
+  const q = (document.getElementById('prodSearch')?.value || '').toLowerCase();
+  const keys = q ? _prodKeys.filter(k => k.toLowerCase().includes(q)) : _prodKeys;
 
-  keys.forEach(key => {
-    const btn = document.createElement('button');
-    btn.className = 'pill' + (selectedProducts.includes(key) ? ' active' : '');
-    btn.dataset.key = key;
-    btn.innerHTML = `${esc(key)}<span class="pill-count">${counts[key]}</span>`;
-    btn.onclick = () => {
-      const idx = selectedProducts.indexOf(key);
-      if (idx >= 0) selectedProducts.splice(idx, 1); else selectedProducts.push(key);
-      saveProductPrefs();
-      refreshPillActive();
-      renderAll();
-    };
-    row.appendChild(btn);
+  if (!keys.length) {
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:#605e5c;font-size:12px">No products match</div>';
+    return;
+  }
+  list.innerHTML = keys.map(key => {
+    const c = counts[key] ?? 0;
+    return `<label class="prod-item">
+      <input type="checkbox"${selectedProducts.includes(key) ? ' checked' : ''} onchange="toggleProduct(${JSON.stringify(key)})">
+      <span class="prod-item-label">${esc(key)}</span>
+      <span class="prod-item-count" data-key="${esc(key)}">${c}</span>
+    </label>`;
+  }).join('');
+}
+
+function toggleProduct(key) {
+  const idx = selectedProducts.indexOf(key);
+  if (idx >= 0) selectedProducts.splice(idx, 1); else selectedProducts.push(key);
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function removeProduct(key) {
+  const idx = selectedProducts.indexOf(key);
+  if (idx >= 0) selectedProducts.splice(idx, 1);
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function clearProducts() {
+  selectedProducts = [];
+  saveProductPrefs();
+  refreshDropdownState();
+  renderAll();
+}
+
+function toggleDropdown() {
+  const panel = document.getElementById('prodPanel');
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+  } else {
+    rebuildDropdownList(_prodCurrentCounts);
+    panel.style.display = 'block';
+    document.getElementById('prodSearch')?.focus();
+  }
+}
+
+function filterDropdown() {
+  rebuildDropdownList(_prodCurrentCounts);
+}
+
+function refreshDropdownState() {
+  const trigger = document.getElementById('prodTrigger');
+  const footer  = document.getElementById('prodClearBtn');
+  if (!trigger) return;
+  if (selectedProducts.length === 0) {
+    trigger.textContent = 'Products: All ▾';
+    trigger.classList.remove('has-selection');
+    if (footer) footer.style.display = 'none';
+  } else {
+    trigger.textContent = `Products: ${selectedProducts.length} selected ▾`;
+    trigger.classList.add('has-selection');
+    if (footer) footer.style.display = 'block';
+  }
+  const chips = document.getElementById('prodChips');
+  if (chips) {
+    chips.innerHTML = selectedProducts.map(key =>
+      `<span class="prod-chip">${esc(key)}<span class="prod-chip-x" onclick="removeProduct(${JSON.stringify(key)})" title="Remove">×</span></span>`
+    ).join('');
+  }
+  document.querySelectorAll('#prodList .prod-item input').forEach(cb => {
+    const lbl = cb.parentElement?.querySelector('.prod-item-label')?.textContent;
+    if (lbl !== undefined) cb.checked = selectedProducts.includes(lbl);
   });
 }
 
-function refreshPillActive() {
-  document.querySelectorAll('#productFilterRow .pill').forEach(btn => {
-    const key = btn.dataset.key || '';
-    btn.classList.toggle('active', key === '' ? selectedProducts.length === 0 : selectedProducts.includes(key));
-  });
-}
+function refreshPillActive() { refreshDropdownState(); }
 
-// Counts shown on pills match the items currently in range/search
 function updatePillCounts(items) {
-  document.querySelectorAll('#productFilterRow .pill').forEach(btn => {
-    const span = btn.querySelector('.pill-count');
-    if (!span) return;
-    const key = btn.dataset.key || '';
-    span.textContent = key === ''
-      ? items.length
-      : items.filter(i => i._labels.includes(key)).length;
+  const liveCounts = {};
+  items.forEach(i => i._labels.forEach(l => liveCounts[l] = (liveCounts[l] || 0) + 1));
+  _prodCurrentCounts = liveCounts;
+  document.querySelectorAll('#prodList .prod-item-count').forEach(span => {
+    const key = span.dataset.key;
+    if (key !== undefined) span.textContent = liveCounts[key] ?? 0;
   });
 }
+
+document.addEventListener('click', e => {
+  const dd = document.getElementById('prodDropdown');
+  if (dd && !dd.contains(e.target)) {
+    const panel = document.getElementById('prodPanel');
+    if (panel) panel.style.display = 'none';
+  }
+});
 
 function saveProductPrefs() {
   try { localStorage.setItem('m365_products', JSON.stringify(selectedProducts)); } catch {}
