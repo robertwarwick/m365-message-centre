@@ -631,14 +631,16 @@ function renderAll() {
     });
   }
 
-  // Assign products to each item
+  // Assign labels to each item: known products (matched on services, title,
+  // summary) plus any services that match no known product rule
   items = items.map(item => ({
     ...item,
     _products: getProducts(item),
+    _labels: getLabels(item),
   }));
 
-  // Keep only items matching target products
-  items = items.filter(item => item._products.length > 0);
+  // Drop items that can't be classified at all
+  items = items.filter(item => item._labels.length > 0);
 
   // Search filter
   if (query) {
@@ -650,13 +652,14 @@ function renderAll() {
     );
   }
 
+  // Pill counts reflect the current date range + search, BEFORE the product
+  // filter — so each count answers "how many items if I select this pill"
+  updatePillCounts(items);
+
   // Product filter (multi-select)
   if (selectedProducts.length > 0) {
     items = items.filter(item =>
-      selectedProducts.some(sel =>
-        PRODUCT_RULES[sel] ? (item._products || []).includes(sel)
-                           : (item.Services  || []).includes(sel)
-      )
+      selectedProducts.some(sel => item._labels.includes(sel))
     );
   }
 
@@ -681,26 +684,18 @@ function renderAll() {
     return;
   }
 
-  // Group by product (when "All" is selected)
-  if (selectedProducts.length === 0) {
-    const sections = Object.keys(PRODUCT_RULES).map(product => {
-      const productItems = items.filter(i => i._products.includes(product));
-      return { product, items: productItems };
-    }).filter(s => s.items.length > 0);
+  // Group into sections by label. Known products come first (in rule order),
+  // then other services by item count. An item can appear in several sections.
+  const groupLabels = selectedProducts.length > 0
+    ? selectedProducts
+    : orderedLabels(items);
 
-    // For items shown in multiple sections, each section shows the item
-    const html = sections.map(s => renderSection(s.product, s.items, query)).join('');
-    setContent(html);
-  } else {
-    const html = selectedProducts
-      .filter(p => PRODUCT_RULES[p])
-      .map(p => {
-        const pi = items.filter(i => (i._products||[]).includes(p));
-        return pi.length ? renderSection(p, pi, query) : '';
-      })
-      .join('') || renderSection(selectedProducts[0], items, query);
-    setContent(html);
-  }
+  const sections = groupLabels.map(label => ({
+    label,
+    items: items.filter(i => i._labels.includes(label)),
+  })).filter(s => s.items.length > 0);
+
+  setContent(sections.map(s => renderSection(s.label, s.items, query)).join(''));
 
   updateHeaderSub();
 }
@@ -716,24 +711,34 @@ function getProducts(item) {
     .map(([product]) => product);
 }
 
-function buildProductPills(dataItems) {
-  const productCounts = {};
-  const extraServiceCounts = {};
-  dataItems.forEach(item => {
-    const matched = new Set();
-    (item.Services || []).forEach(svc => {
-      let found = false;
-      for (const [product, matcher] of Object.entries(PRODUCT_RULES)) {
-        if (matcher(svc)) { matched.add(product); found = true; break; }
-      }
-      if (!found && svc) extraServiceCounts[svc] = (extraServiceCounts[svc] || 0) + 1;
-    });
-    matched.forEach(p => productCounts[p] = (productCounts[p] || 0) + 1);
+// Labels = known products (matched via services/title/summary) plus any
+// services that match no known product rule. Used consistently for pill
+// counts, filtering and section grouping so the numbers always agree.
+function getLabels(item) {
+  const labels = new Set(getProducts(item));
+  (item.Services || []).forEach(svc => {
+    if (svc && !Object.values(PRODUCT_RULES).some(fn => fn(svc))) labels.add(svc);
   });
+  return [...labels];
+}
 
-  const pills = [
-    ...Object.entries(productCounts).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
-    ...Object.entries(extraServiceCounts).filter(([,c])=>c>1).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
+// Known products first (rule order), then other labels by frequency
+function orderedLabels(items) {
+  const counts = {};
+  items.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+  const known = Object.keys(PRODUCT_RULES).filter(p => counts[p]);
+  const extra = Object.keys(counts).filter(l => !PRODUCT_RULES[l]).sort((a, b) => counts[b] - counts[a]);
+  return [...known, ...extra];
+}
+
+function buildProductPills(dataItems) {
+  const labelled = dataItems.map(item => ({ _labels: getLabels(item) }));
+  const counts = {};
+  labelled.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+
+  const keys = [
+    ...Object.keys(PRODUCT_RULES).filter(p => counts[p]),
+    ...Object.keys(counts).filter(l => !PRODUCT_RULES[l] && counts[l] > 1).sort((a, b) => counts[b] - counts[a]),
   ];
 
   const row = document.getElementById('productFilterRow');
@@ -741,22 +746,43 @@ function buildProductPills(dataItems) {
 
   const allBtn = document.createElement('button');
   allBtn.className = 'pill' + (selectedProducts.length === 0 ? ' active' : '');
-  allBtn.innerHTML = `All<span class="pill-count">${dataItems.length}</span>`;
-  allBtn.onclick = () => { selectedProducts = []; saveProductPrefs(); buildProductPills(dataItems); renderAll(); };
+  allBtn.dataset.key = '';
+  allBtn.innerHTML = `All<span class="pill-count">${labelled.length}</span>`;
+  allBtn.onclick = () => { selectedProducts = []; saveProductPrefs(); refreshPillActive(); renderAll(); };
   row.appendChild(allBtn);
 
-  pills.forEach(({ key, label, count }) => {
+  keys.forEach(key => {
     const btn = document.createElement('button');
     btn.className = 'pill' + (selectedProducts.includes(key) ? ' active' : '');
-    btn.innerHTML = `${esc(label)}<span class="pill-count">${count}</span>`;
+    btn.dataset.key = key;
+    btn.innerHTML = `${esc(key)}<span class="pill-count">${counts[key]}</span>`;
     btn.onclick = () => {
       const idx = selectedProducts.indexOf(key);
       if (idx >= 0) selectedProducts.splice(idx, 1); else selectedProducts.push(key);
       saveProductPrefs();
-      buildProductPills(dataItems);
+      refreshPillActive();
       renderAll();
     };
     row.appendChild(btn);
+  });
+}
+
+function refreshPillActive() {
+  document.querySelectorAll('#productFilterRow .pill').forEach(btn => {
+    const key = btn.dataset.key || '';
+    btn.classList.toggle('active', key === '' ? selectedProducts.length === 0 : selectedProducts.includes(key));
+  });
+}
+
+// Counts shown on pills match the items currently in range/search
+function updatePillCounts(items) {
+  document.querySelectorAll('#productFilterRow .pill').forEach(btn => {
+    const span = btn.querySelector('.pill-count');
+    if (!span) return;
+    const key = btn.dataset.key || '';
+    span.textContent = key === ''
+      ? items.length
+      : items.filter(i => i._labels.includes(key)).length;
   });
 }
 
@@ -907,12 +933,12 @@ function updateHeaderSub() {
       const d = new Date(i.LastModifiedDateTime || i.StartDateTime);
       if (d < cutoff) return false;
     }
-    return getProducts(i).length > 0;
+    return getLabels(i).length > 0;
   });
   const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
   const productLabel = selectedProducts.length > 0
     ? selectedProducts.join(', ')
-    : `${Object.keys(PRODUCT_RULES).length} tracked products`;
+    : 'all products';
   document.getElementById('headerSub').textContent =
     `${relevant.length} relevant updates · ${rangeLabel} · ${productLabel}`;
 }

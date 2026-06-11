@@ -396,21 +396,21 @@ function renderAll() {
 
   let items = allItems
     .filter(i => i.Id && i.Id.startsWith('RM'))
-    .map(i => ({ ...i, _products: getProducts(i), _status: getPrimaryStatus(i.Tags||[]) }))
+    .map(i => ({ ...i, _products: getProducts(i), _labels: getLabels(i), _status: getPrimaryStatus(i.Tags||[]) }))
     .filter(i => FORWARD_STATUSES.has(i._status) && i._gaDate)
     .filter(i => i._gaDate >= today && i._gaDate <= horizon);
 
-  items = items.filter(i => i._products.length > 0);
+  items = items.filter(i => i._labels.length > 0);
 
   // Populate global item map for tooltip lookups (before product filter)
   window._tlItemMap = Object.fromEntries(items.map(i => [i.Id, i]));
 
+  // Pill counts reflect the current GA horizon, BEFORE the product filter
+  updatePillCounts(items);
+
   if (selectedProducts.length > 0) {
     items = items.filter(i =>
-      selectedProducts.some(sel =>
-        PRODUCT_RULES[sel] ? (i._products || []).includes(sel)
-                           : (i.Services || []).includes(sel)
-      )
+      selectedProducts.some(sel => i._labels.includes(sel))
     );
   }
 
@@ -434,7 +434,8 @@ function renderAll() {
 
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('headerSub').textContent =
-    `${items.length} roadmap item${items.length!==1?'s':''} going GA within ${rl} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${items.length} roadmap item${items.length!==1?'s':''} going GA within ${rl}` +
+    (selectedProducts.length > 0 ? ` · ${selectedProducts.join(', ')}` : '');
 }
 
 // ── Timeline renderer ─────────────────────────────────────────────
@@ -442,13 +443,10 @@ function renderTimeline(items, tMin, tMax, today) {
   const totalMs  = tMax - tMin;
   const todayPct = Math.max(0, Math.min(100, (today - tMin) / totalMs * 100));
   const ticks   = makeTicks(tMin, tMax, totalMs);
-  const products = selectedProducts.length === 0
-    ? Object.keys(PRODUCT_RULES)
-    : selectedProducts.filter(s => PRODUCT_RULES[s]); // only known product keys have lanes
-  // If only extra-service products selected, fall back to all lanes
-  const effectiveProducts = products.length > 0 ? products : Object.keys(PRODUCT_RULES);
-  const lanes = effectiveProducts
-    .map(p => ({ product: p, items: items.filter(i => i._products.includes(p)) }))
+  // One lane per label; known products first, then other labels by frequency
+  const laneLabels = selectedProducts.length === 0 ? orderedLabels(items) : selectedProducts;
+  const lanes = laneLabels
+    .map(p => ({ product: p, items: items.filter(i => i._labels.includes(p)) }))
     .filter(l => l.items.length > 0);
 
   if (!lanes.length) { setContent(`<div class="state-msg"><h3>No items to display</h3></div>`); return; }
@@ -619,53 +617,84 @@ function getProducts(item) {
   const c = [...(item.Services||[]), item.Title||'', item.Summary||''];
   return Object.entries(PRODUCT_RULES).filter(([,fn])=>c.some(s=>fn(s))).map(([p])=>p);
 }
-function buildProductPills(dataItems) {
-  // Count items per PRODUCT_RULES group
-  const productCounts = {};
-  const extraServiceCounts = {};
-  dataItems.forEach(item => {
-    const matched = new Set();
-    (item.Services || []).forEach(svc => {
-      let found = false;
-      for (const [product, matcher] of Object.entries(PRODUCT_RULES)) {
-        if (matcher(svc)) { matched.add(product); found = true; break; }
-      }
-      if (!found) extraServiceCounts[svc] = (extraServiceCounts[svc] || 0) + 1;
-    });
-    matched.forEach(p => productCounts[p] = (productCounts[p] || 0) + 1);
+// Labels = known products (matched via services/title/summary) plus any
+// services that match no known product rule. Used consistently for pill
+// counts, filtering and lane grouping so the numbers always agree.
+function getLabels(item) {
+  const labels = new Set(getProducts(item));
+  (item.Services || []).forEach(svc => {
+    if (svc && !Object.values(PRODUCT_RULES).some(fn => fn(svc))) labels.add(svc);
   });
+  return [...labels];
+}
 
-  // Build pill data: known products first, then extra services
-  const pills = [
-    ...Object.entries(productCounts).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
-    ...Object.entries(extraServiceCounts).filter(([,c])=>c>0).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
+// Known products first (rule order), then other labels by frequency
+function orderedLabels(items) {
+  const counts = {};
+  items.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+  const known = Object.keys(PRODUCT_RULES).filter(p => counts[p]);
+  const extra = Object.keys(counts).filter(l => !PRODUCT_RULES[l]).sort((a, b) => counts[b] - counts[a]);
+  return [...known, ...extra];
+}
+
+function buildProductPills(dataItems) {
+  // Pill set comes from items that could ever appear on the timeline:
+  // forward statuses with a parsed GA date
+  const eligible = dataItems
+    .filter(i => i.Id && i.Id.startsWith('RM') && i._gaDate)
+    .filter(i => FORWARD_STATUSES.has(getPrimaryStatus(i.Tags || [])))
+    .map(i => ({ _labels: getLabels(i) }));
+  const counts = {};
+  eligible.forEach(i => i._labels.forEach(l => counts[l] = (counts[l] || 0) + 1));
+
+  const keys = [
+    ...Object.keys(PRODUCT_RULES).filter(p => counts[p]),
+    ...Object.keys(counts).filter(l => !PRODUCT_RULES[l]).sort((a, b) => counts[b] - counts[a]),
   ];
 
   const row = document.getElementById('productFilterRow');
-  // Keep the label span, replace everything else
   row.innerHTML = '<span class="filter-label">Product:</span>';
 
-  // All button
   const allBtn = document.createElement('button');
   allBtn.className = 'pill' + (selectedProducts.length === 0 ? ' active' : '');
-  allBtn.innerHTML = `All<span class="pill-count">${dataItems.length}</span>`;
-  allBtn.onclick = () => { selectedProducts = []; saveProductPrefs(); buildProductPills(dataItems); renderAll(); };
+  allBtn.dataset.key = '';
+  allBtn.innerHTML = `All<span class="pill-count">${eligible.length}</span>`;
+  allBtn.onclick = () => { selectedProducts = []; saveProductPrefs(); refreshPillActive(); renderAll(); };
   row.appendChild(allBtn);
 
-  pills.forEach(({ key, label, count }) => {
+  keys.forEach(key => {
     const btn = document.createElement('button');
-    const active = selectedProducts.includes(key);
-    btn.className = 'pill' + (active ? ' active' : '');
-    btn.innerHTML = `${esc(label)}<span class="pill-count">${count}</span>`;
+    btn.className = 'pill' + (selectedProducts.includes(key) ? ' active' : '');
+    btn.dataset.key = key;
+    btn.innerHTML = `${esc(key)}<span class="pill-count">${counts[key]}</span>`;
     btn.onclick = () => {
       const idx = selectedProducts.indexOf(key);
       if (idx >= 0) selectedProducts.splice(idx, 1);
       else selectedProducts.push(key);
       saveProductPrefs();
-      buildProductPills(dataItems);
+      refreshPillActive();
       renderAll();
     };
     row.appendChild(btn);
+  });
+}
+
+function refreshPillActive() {
+  document.querySelectorAll('#productFilterRow .pill').forEach(btn => {
+    const key = btn.dataset.key || '';
+    btn.classList.toggle('active', key === '' ? selectedProducts.length === 0 : selectedProducts.includes(key));
+  });
+}
+
+// Counts shown on pills match the items within the current GA horizon
+function updatePillCounts(items) {
+  document.querySelectorAll('#productFilterRow .pill').forEach(btn => {
+    const span = btn.querySelector('.pill-count');
+    if (!span) return;
+    const key = btn.dataset.key || '';
+    span.textContent = key === ''
+      ? items.length
+      : items.filter(i => i._labels.includes(key)).length;
   });
 }
 
