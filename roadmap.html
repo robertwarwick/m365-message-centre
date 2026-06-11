@@ -938,6 +938,116 @@ function highlight(text, query) {
   return esc(text).replace(re, '<mark>$1</mark>');
 }
 
+// ── DETAIL PANEL ─────────────────────────────────────────────────────────
+let _dpShowTimer = null;
+let _dpHideTimer = null;
+
+function dpCardEnter(id) {
+  clearTimeout(_dpHideTimer);
+  _dpHideTimer = null;
+  clearTimeout(_dpShowTimer);
+  _dpShowTimer = setTimeout(() => dpShow(id), 350);
+}
+
+function dpStartHide() {
+  clearTimeout(_dpShowTimer);
+  _dpHideTimer = setTimeout(() => {
+    const p = document.getElementById('detailPanel');
+    p.classList.remove('visible');
+    p.style.display = 'none';
+  }, 200);
+}
+
+function dpCancelHide() {
+  clearTimeout(_dpHideTimer);
+  _dpHideTimer = null;
+}
+
+function dpShow(id) {
+  const item = allItems.find(i => i.Id === id);
+  if (!item) return;
+  const panel = document.getElementById('detailPanel');
+
+  const url = item.Url || `https://www.microsoft.com/microsoft-365/roadmap?id=${(item.Id||'').replace('RM','')}`;
+  const tags = item.Tags || [];
+  const services = item.Services || [];
+  const modDate = item.LastModifiedDateTime;
+  const startDate = item.StartDateTime;
+  const primaryStatus = getPrimaryStatus(tags);
+  const progress = STATUS_PROGRESS[primaryStatus] ?? 0;
+  const progressClass = primaryStatus.toLowerCase().replace(/\s+/g,'');
+  const products = item._products || [];
+
+  const statusBadgeMap = {
+    'Launched':       `<span class="badge badge-launched">✓ Launched</span>`,
+    'Rolling out':    `<span class="badge badge-rolling">↗ Rolling out</span>`,
+    'In development': `<span class="badge badge-dev">⚙ In development</span>`,
+    'Preview':        `<span class="badge badge-preview">◎ Preview</span>`,
+    'Cancelled':      `<span class="badge badge-cancelled">✕ Cancelled</span>`,
+  };
+  const statusBadge = statusBadgeMap[primaryStatus] || '';
+  const majorBadge  = item.IsMajorChange ? `<span class="badge badge-major">⚠ Major</span>` : '';
+
+  const gaDateStr = item._gaDate
+    ? item._gaDate.toLocaleDateString('en-GB',{month:'short',year:'numeric'})
+    : '';
+
+  const rawSummary = item.Summary || '';
+  const sanitized  = dpSanitize(rawSummary);
+
+  const scopeTags = tags.filter(t =>
+    !['Launched','In development','Rolling out','Preview','Cancelled','General Availability'].includes(t)
+  );
+
+  panel.innerHTML = `
+    <div class="dp-header">
+      <div class="dp-title"><a href="${esc(url)}" target="_blank">${esc(item.Title || 'Untitled')}</a></div>
+      <div class="dp-badges">${majorBadge}${statusBadge}</div>
+    </div>
+    <div class="dp-body">
+      <div class="dp-section">
+        <div class="dp-label">Details</div>
+        <div class="dp-meta-row"><span class="dp-meta-lbl">ID:</span><span style="font-family:monospace">${esc(item.Id||'')}</span></div>
+        ${gaDateStr ? `<div class="dp-meta-row"><span class="dp-meta-lbl">GA date:</span><span>${esc(gaDateStr)}</span></div>` : ''}
+        ${modDate ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Updated:</span><span>${esc(formatDate(modDate))}</span></div>` : ''}
+        ${products.length ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Products:</span><span>${esc(products.join(', '))}</span></div>` : ''}
+        ${services.length ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Services:</span><span>${esc(services.filter(s=>!['Launched','In development','Rolling out','Preview','Cancelled','General Availability'].includes(s)).slice(0,5).join(', '))}</span></div>` : ''}
+      </div>
+      ${primaryStatus !== 'Launched' && primaryStatus !== 'Cancelled' ? `
+      <div class="dp-progress">
+        <div class="dp-label">Progress</div>
+        <div class="timeline-bar">
+          <span style="font-size:12px">${esc(primaryStatus)}</span>
+          <div class="timeline-track" style="max-width:none;flex:1">
+            <div class="timeline-fill ${esc(progressClass)}" style="width:${progress}%"></div>
+          </div>
+          <span style="font-size:12px">${progress}%</span>
+        </div>
+      </div>` : ''}
+      ${sanitized ? `<div class="dp-section"><div class="dp-label">Summary</div><div class="dp-summary">${sanitized}</div></div>` : ''}
+      ${scopeTags.length ? `<div class="dp-section"><div class="dp-label">Tags</div><div class="dp-tags">${scopeTags.map(t=>`<span class="dp-tag">${esc(t)}</span>`).join('')}</div></div>` : ''}
+    </div>
+    <div class="dp-footer">
+      <a class="dp-link" href="${esc(url)}" target="_blank">↗ Microsoft Roadmap</a>
+      <button class="dp-close" onclick="dpStartHide()" title="Close">×</button>
+    </div>`;
+
+  panel.classList.add('visible');
+}
+
+function dpSanitize(html) {
+  if (!html) return '';
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  d.querySelectorAll('script,style,iframe,object,embed,form').forEach(el => el.remove());
+  d.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+    });
+  });
+  return d.innerHTML;
+}
+
 // ── EMAIL ────────────────────────────────────────────────────────────────
 async function sendEmail() {
   const input = document.getElementById('emailTo');
