@@ -417,6 +417,55 @@
   .email-feedback { font-size: 12px; margin-left: 4px; }
   .email-feedback.ok { color: #107C10; }
   .email-feedback.err { color: #c50f1f; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 380px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--ms-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+  }
+  .detail-panel.visible { display: flex; animation: dpSlideIn 0.15s ease; }
+  @keyframes dpSlideIn {
+    from { opacity: 0; transform: translateY(-50%) translateX(14px); }
+    to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+  }
+  .dp-header {
+    background: var(--ms-blue);
+    color: white;
+    padding: 14px 16px;
+    border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+  }
+  .dp-title { font-size: 14px; font-weight: 600; line-height: 1.35; margin-bottom: 8px; }
+  .dp-title a { color: white; text-decoration: none; }
+  .dp-title a:hover { text-decoration: underline; }
+  .dp-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dp-body { padding: 14px 16px; font-size: 13px; color: var(--ms-text); }
+  .dp-section { margin-bottom: 12px; }
+  .dp-label { font-size: 11px; font-weight: 600; color: var(--ms-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .dp-summary { line-height: 1.6; color: var(--ms-text); }
+  .dp-summary img { max-width: 100%; border-radius: 4px; margin: 6px 0; display: block; }
+  .dp-summary a { color: var(--ms-blue); }
+  .dp-meta-row { display: flex; gap: 8px; font-size: 12px; margin-bottom: 4px; color: var(--ms-text-muted); }
+  .dp-meta-lbl { font-weight: 600; color: var(--ms-text); white-space: nowrap; }
+  .dp-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .dp-tag { background: var(--ms-grey-light); border: 1px solid var(--ms-border); padding: 2px 8px; border-radius: 4px; font-size: 11px; color: var(--ms-text-muted); }
+  .dp-footer { padding: 10px 16px; border-top: 1px solid var(--ms-border); display: flex; gap: 12px; flex-shrink: 0; }
+  .dp-link { color: var(--ms-blue); font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+  .dp-link:hover { text-decoration: underline; }
+  .dp-close { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--ms-text-muted); font-size: 18px; line-height: 1; padding: 0 2px; }
+  .dp-close:hover { color: var(--ms-text); }
 </style>
 </head>
 <body>
@@ -457,16 +506,8 @@
         <option value="0">All time</option>
       </select>
     </div>
-    <div class="filter-row">
+    <div class="filter-row" id="productFilterRow" style="flex-wrap:wrap">
       <span class="filter-label">Product:</span>
-      <button class="pill active" data-product="All" onclick="setProduct('All')">All<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate<span class="pill-count"></span></button>
-      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales<span class="pill-count"></span></button>
-      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central<span class="pill-count"></span></button>
     </div>
     <div class="filter-row">
       <span class="filter-label">Email:</span>
@@ -495,6 +536,8 @@
 <div class="footer">
   Data sourced from <a href="https://mc.merill.net" target="_blank" style="color:var(--ms-blue)">mc.merill.net</a> — Microsoft 365 Message Centre archive
 </div>
+
+<div id="detailPanel" class="detail-panel" onmouseenter="dpCancelHide()" onmouseleave="dpStartHide()"></div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────
@@ -531,7 +574,7 @@ const PRODUCT_ICONS = {
 
 // ── STATE ───────────────────────────────────────────────────────────────
 let allItems = [];
-let activeProduct = 'All';
+let selectedProducts = loadProductPrefs();
 let lastFetchTime = null;
 let currentViewItems = [];
 
@@ -559,6 +602,7 @@ async function loadData(forceRefresh = false) {
     const data = await res.json();
     allItems = Array.isArray(data) ? data : (data.items || data.messages || []);
     lastFetchTime = new Date();
+    buildProductPills(allItems.filter(i => i.Id && i.Id.startsWith('MC')));
     renderAll();
   } catch (err) {
     showError(`Failed to load data: ${err.message}. <a href="${DATA_URL}" target="_blank" style="color:#c50f1f">Try opening the data source directly</a>.`);
@@ -606,12 +650,14 @@ function renderAll() {
     );
   }
 
-  // Update pill counts (after date + search, before product filter)
-  updatePillCounts(items);
-
-  // Product filter
-  if (activeProduct !== 'All') {
-    items = items.filter(item => item._products.includes(activeProduct));
+  // Product filter (multi-select)
+  if (selectedProducts.length > 0) {
+    items = items.filter(item =>
+      selectedProducts.some(sel =>
+        PRODUCT_RULES[sel] ? (item._products || []).includes(sel)
+                           : (item.Services  || []).includes(sel)
+      )
+    );
   }
 
   // Sort by date desc
@@ -630,13 +676,13 @@ function renderAll() {
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c8c6c4" stroke-width="1.5"><path d="M9 9l6 6m0-6l-6 6"/><circle cx="12" cy="12" r="10"/></svg>
         <h3>No announcements found</h3>
         <p>No matching updates for the selected filters in the ${rangeLabel}.</p>
-        ${activeProduct !== 'All' || query ? '<p style="margin-top:6px">Try clearing filters or widening the date range.</p>' : ''}
+        ${selectedProducts.length > 0 || query ? '<p style="margin-top:6px">Try clearing filters or widening the date range.</p>' : ''}
       </div>`);
     return;
   }
 
   // Group by product (when "All" is selected)
-  if (activeProduct === 'All') {
+  if (selectedProducts.length === 0) {
     const sections = Object.keys(PRODUCT_RULES).map(product => {
       const productItems = items.filter(i => i._products.includes(product));
       return { product, items: productItems };
@@ -646,7 +692,13 @@ function renderAll() {
     const html = sections.map(s => renderSection(s.product, s.items, query)).join('');
     setContent(html);
   } else {
-    const html = renderSection(activeProduct, items, query);
+    const html = selectedProducts
+      .filter(p => PRODUCT_RULES[p])
+      .map(p => {
+        const pi = items.filter(i => (i._products||[]).includes(p));
+        return pi.length ? renderSection(p, pi, query) : '';
+      })
+      .join('') || renderSection(selectedProducts[0], items, query);
     setContent(html);
   }
 
@@ -664,15 +716,56 @@ function getProducts(item) {
     .map(([product]) => product);
 }
 
-function updatePillCounts(items) {
-  document.querySelectorAll('.pill[data-product]').forEach(pill => {
-    const product = pill.dataset.product;
-    const countEl = pill.querySelector('.pill-count');
-    if (!countEl) return;
-    countEl.textContent = product === 'All'
-      ? items.length
-      : items.filter(i => i._products.includes(product)).length;
+function buildProductPills(dataItems) {
+  const productCounts = {};
+  const extraServiceCounts = {};
+  dataItems.forEach(item => {
+    const matched = new Set();
+    (item.Services || []).forEach(svc => {
+      let found = false;
+      for (const [product, matcher] of Object.entries(PRODUCT_RULES)) {
+        if (matcher(svc)) { matched.add(product); found = true; break; }
+      }
+      if (!found && svc) extraServiceCounts[svc] = (extraServiceCounts[svc] || 0) + 1;
+    });
+    matched.forEach(p => productCounts[p] = (productCounts[p] || 0) + 1);
   });
+
+  const pills = [
+    ...Object.entries(productCounts).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
+    ...Object.entries(extraServiceCounts).filter(([,c])=>c>1).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
+  ];
+
+  const row = document.getElementById('productFilterRow');
+  row.innerHTML = '<span class="filter-label">Product:</span>';
+
+  const allBtn = document.createElement('button');
+  allBtn.className = 'pill' + (selectedProducts.length === 0 ? ' active' : '');
+  allBtn.innerHTML = `All<span class="pill-count">${dataItems.length}</span>`;
+  allBtn.onclick = () => { selectedProducts = []; saveProductPrefs(); buildProductPills(dataItems); renderAll(); };
+  row.appendChild(allBtn);
+
+  pills.forEach(({ key, label, count }) => {
+    const btn = document.createElement('button');
+    btn.className = 'pill' + (selectedProducts.includes(key) ? ' active' : '');
+    btn.innerHTML = `${esc(label)}<span class="pill-count">${count}</span>`;
+    btn.onclick = () => {
+      const idx = selectedProducts.indexOf(key);
+      if (idx >= 0) selectedProducts.splice(idx, 1); else selectedProducts.push(key);
+      saveProductPrefs();
+      buildProductPills(dataItems);
+      renderAll();
+    };
+    row.appendChild(btn);
+  });
+}
+
+function saveProductPrefs() {
+  try { localStorage.setItem('m365_products', JSON.stringify(selectedProducts)); } catch {}
+}
+
+function loadProductPrefs() {
+  try { return JSON.parse(localStorage.getItem('m365_products') || '[]'); } catch { return []; }
 }
 
 function renderSection(product, items, query) {
@@ -724,7 +817,7 @@ function renderCard(item, query) {
   ).join('');
 
   return `
-    <div class="card">
+    <div class="card" onmouseenter="dpCardEnter('${esc(id)}')" onmouseleave="dpStartHide()">
       <div class="card-header">
         <a class="card-title" href="${esc(url)}" target="_blank">${title}</a>
         <div class="badges">
@@ -777,14 +870,6 @@ function buildDatePills(tags, startDate) {
 }
 
 // ── UI HELPERS ───────────────────────────────────────────────────────────
-function setProduct(p) {
-  activeProduct = p;
-  document.querySelectorAll('.pill[data-product]').forEach(el => {
-    el.classList.toggle('active', el.dataset.product === p);
-  });
-  renderAll();
-}
-
 function setContent(html) {
   document.getElementById('content').innerHTML = html;
 }
@@ -805,7 +890,7 @@ function updateStatusBar(count) {
   const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('statusText').innerHTML =
     `Showing <strong>${count}</strong> announcement${count !== 1 ? 's' : ''}` +
-    (activeProduct !== 'All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    (selectedProducts.length > 0 ? ` for <strong>${selectedProducts.join(', ')}</strong>` : '') +
     ` · ${rangeLabel}`;
   if (lastFetchTime) {
     document.getElementById('lastFetched').textContent =
@@ -825,8 +910,11 @@ function updateHeaderSub() {
     return getProducts(i).length > 0;
   });
   const rangeLabel = document.getElementById('rangeSelect').selectedOptions[0].text;
+  const productLabel = selectedProducts.length > 0
+    ? selectedProducts.join(', ')
+    : `${Object.keys(PRODUCT_RULES).length} tracked products`;
   document.getElementById('headerSub').textContent =
-    `${relevant.length} relevant updates · ${rangeLabel} · ${Object.keys(PRODUCT_RULES).length} tracked products`;
+    `${relevant.length} relevant updates · ${rangeLabel} · ${productLabel}`;
 }
 
 function formatDate(iso) {
@@ -847,6 +935,108 @@ function highlight(text, query) {
   const escaped = esc(text);
   const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
   return escaped.replace(re, '<mark>$1</mark>');
+}
+
+// ── DETAIL PANEL ─────────────────────────────────────────────────────────
+let _dpShowTimer = null;
+let _dpHideTimer = null;
+
+function dpCardEnter(id) {
+  clearTimeout(_dpHideTimer);
+  _dpHideTimer = null;
+  clearTimeout(_dpShowTimer);
+  _dpShowTimer = setTimeout(() => dpShow(id), 350);
+}
+
+function dpStartHide() {
+  clearTimeout(_dpShowTimer);
+  _dpHideTimer = setTimeout(() => {
+    const p = document.getElementById('detailPanel');
+    p.classList.remove('visible');
+    p.style.display = 'none';
+  }, 200);
+}
+
+function dpCancelHide() {
+  clearTimeout(_dpHideTimer);
+  _dpHideTimer = null;
+}
+
+function dpShow(id) {
+  const item = allItems.find(i => i.Id === id);
+  if (!item) return;
+  const panel = document.getElementById('detailPanel');
+
+  const url = item.Url || `https://mc.merill.net/message/${item.Id}`;
+  const adminUrl = `https://admin.microsoft.com/AdminPortal/home#/MessageCenter/:/messages/${item.Id}`;
+  const tags = item.Tags || [];
+  const services = item.Services || [];
+  const modDate = item.LastModifiedDateTime || item.StartDateTime;
+  const startDate = item.StartDateTime;
+  const statusTag = tags.find(t => ['Launched','In development','Rolling out','Preview','Cancelled'].includes(t));
+  const products = item._products || [];
+
+  const statusBadgeMap = {
+    'Launched':       `<span class="badge badge-launched">✓ Launched</span>`,
+    'Rolling out':    `<span class="badge badge-rolling">↗ Rolling out</span>`,
+    'In development': `<span class="badge badge-dev">⚙ In development</span>`,
+    'Preview':        `<span class="badge badge-preview">◎ Preview</span>`,
+    'Cancelled':      `<span class="badge badge-cancelled">✕ Cancelled</span>`,
+  };
+
+  const isMajor = item.IsMajorChange;
+  const isUpdated = (item.Title || '').startsWith('(Updated)');
+  const statusBadge = statusBadgeMap[statusTag] || '';
+  const majorBadge  = isMajor ? `<span class="badge badge-major">⚠ Major</span>` : '';
+  const updBadge    = isUpdated ? `<span class="badge badge-updated">↻ Updated</span>` : '';
+
+  // Sanitise summary HTML — allow basic formatting and images
+  const rawSummary = item.Summary || '';
+  const sanitized  = dpSanitize(rawSummary);
+
+  // Extra scope tags
+  const scopeTags = tags.filter(t =>
+    !['Launched','In development','Rolling out','Preview','Cancelled','General Availability','Preview'].includes(t) &&
+    !t.startsWith('20')
+  );
+
+  panel.innerHTML = `
+    <div class="dp-header">
+      <div class="dp-title"><a href="${esc(url)}" target="_blank">${esc(item.Title || 'Untitled')}</a></div>
+      <div class="dp-badges">${majorBadge}${updBadge}${statusBadge}</div>
+    </div>
+    <div class="dp-body">
+      <div class="dp-section">
+        <div class="dp-label">Details</div>
+        <div class="dp-meta-row"><span class="dp-meta-lbl">ID:</span><span style="font-family:monospace">${esc(item.Id||'')}</span></div>
+        ${modDate ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Updated:</span><span>${esc(formatDate(modDate))}</span></div>` : ''}
+        ${startDate && startDate !== modDate ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Start:</span><span>${esc(formatDate(startDate))}</span></div>` : ''}
+        ${products.length ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Products:</span><span>${esc(products.join(', '))}</span></div>` : ''}
+        ${services.length ? `<div class="dp-meta-row"><span class="dp-meta-lbl">Services:</span><span>${esc(services.slice(0,5).join(', '))}</span></div>` : ''}
+      </div>
+      ${sanitized ? `<div class="dp-section"><div class="dp-label">Summary</div><div class="dp-summary">${sanitized}</div></div>` : ''}
+      ${scopeTags.length ? `<div class="dp-section"><div class="dp-label">Tags</div><div class="dp-tags">${scopeTags.map(t=>`<span class="dp-tag">${esc(t)}</span>`).join('')}</div></div>` : ''}
+    </div>
+    <div class="dp-footer">
+      <a class="dp-link" href="${esc(url)}" target="_blank">↗ mc.merill.net</a>
+      <a class="dp-link" href="${esc(adminUrl)}" target="_blank">↗ Admin Center</a>
+      <button class="dp-close" onclick="dpStartHide()" title="Close">×</button>
+    </div>`;
+
+  panel.classList.add('visible');
+}
+
+function dpSanitize(html) {
+  if (!html) return '';
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  d.querySelectorAll('script,style,iframe,object,embed,form').forEach(el => el.remove());
+  d.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+    });
+  });
+  return d.innerHTML;
 }
 
 // ── EMAIL ────────────────────────────────────────────────────────────────

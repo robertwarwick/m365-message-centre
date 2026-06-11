@@ -185,10 +185,12 @@
     padding: 14px 16px 12px;
     max-width: 340px;
     min-width: 240px;
-    pointer-events: none;
+    pointer-events: auto;
     font-size: 12px;
     line-height: 1.45;
     display: none;
+    max-height: 72vh;
+    overflow-y: auto;
   }
   .tl-tip-badge {
     display: inline-block;
@@ -264,16 +266,8 @@
         <option value="365">1 year</option>
       </select>
     </div>
-    <div class="filter-row">
+    <div class="filter-row" id="productFilterRow" style="flex-wrap:wrap">
       <span class="filter-label">Product:</span>
-      <button class="pill active" data-product="All" onclick="setProduct('All')">All<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate<span class="pill-count"></span></button>
-      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales<span class="pill-count"></span></button>
-      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central<span class="pill-count"></span></button>
     </div>
   </div>
 </div>
@@ -366,7 +360,7 @@ function parseRSSItem(node) {
   };
 }
 
-let allItems = [], activeProduct = 'All', lastFetchTime = null;
+let allItems = [], selectedProducts = loadProductPrefs(), lastFetchTime = null;
 
 // ── Data ──────────────────────────────────────────────────────────
 async function loadData(forceRefresh = false) {
@@ -384,6 +378,7 @@ async function loadData(forceRefresh = false) {
     if (xml.querySelector('parsererror')) throw new Error('XML parse error');
     allItems = [...xml.querySelectorAll('item')].map(parseRSSItem);
     lastFetchTime = new Date();
+    buildProductPills(allItems);
     renderAll();
   } catch(e) {
     showError('Failed to load data: '+e.message+'. Try refreshing.');
@@ -410,8 +405,14 @@ function renderAll() {
   // Populate global item map for tooltip lookups (before product filter)
   window._tlItemMap = Object.fromEntries(items.map(i => [i.Id, i]));
 
-  updatePillCounts(items);
-  if (activeProduct !== 'All') items = items.filter(i => i._products.includes(activeProduct));
+  if (selectedProducts.length > 0) {
+    items = items.filter(i =>
+      selectedProducts.some(sel =>
+        PRODUCT_RULES[sel] ? (i._products || []).includes(sel)
+                           : (i.Services || []).includes(sel)
+      )
+    );
+  }
 
   updateStatusBar(items.length);
 
@@ -441,8 +442,12 @@ function renderTimeline(items, tMin, tMax, today) {
   const totalMs  = tMax - tMin;
   const todayPct = Math.max(0, Math.min(100, (today - tMin) / totalMs * 100));
   const ticks   = makeTicks(tMin, tMax, totalMs);
-  const products = activeProduct === 'All' ? Object.keys(PRODUCT_RULES) : [activeProduct];
-  const lanes = products
+  const products = selectedProducts.length === 0
+    ? Object.keys(PRODUCT_RULES)
+    : selectedProducts.filter(s => PRODUCT_RULES[s]); // only known product keys have lanes
+  // If only extra-service products selected, fall back to all lanes
+  const effectiveProducts = products.length > 0 ? products : Object.keys(PRODUCT_RULES);
+  const lanes = effectiveProducts
     .map(p => ({ product: p, items: items.filter(i => i._products.includes(p)) }))
     .filter(l => l.items.length > 0);
 
@@ -516,7 +521,7 @@ function renderTimeline(items, tMin, tMax, today) {
 // ── Lane builder ──────────────────────────────────────────────────
 function buildLane(product, items, tMin, totalMs) {
   const icon = PRODUCT_ICONS[product] || '📌';
-  const isFocused = activeProduct === product;
+  const isFocused = selectedProducts.length === 1 && selectedProducts[0] === product;
 
   // Position each item on the 0–100% axis by GA date
   const placed = items.map(item => {
@@ -572,7 +577,7 @@ function buildLane(product, items, tMin, totalMs) {
       <a class="tl-card ${sc}" href="${esc(url)}" target="_blank"
          style="left:${x.toFixed(2)}%;top:${cardTop}px"
          data-x="${x.toFixed(2)}" data-sc="${sc}" data-id="${esc(id)}"
-         onmouseenter="tipShow('${esc(id)}',event)" onmouseleave="tipHide()">
+         onmouseenter="tipShow('${esc(id)}',event)" onmouseleave="tipStartHide()">
         <div class="tl-card-title">${esc(title)}</div>
         <span class="tl-card-badge">${badge}</span>
         ${date ? `<div class="tl-card-date">GA: ${esc(date)}</div>` : ''}
@@ -614,24 +619,69 @@ function getProducts(item) {
   const c = [...(item.Services||[]), item.Title||'', item.Summary||''];
   return Object.entries(PRODUCT_RULES).filter(([,fn])=>c.some(s=>fn(s))).map(([p])=>p);
 }
-function updatePillCounts(items) {
-  document.querySelectorAll('.pill[data-product]').forEach(pill => {
-    const el = pill.querySelector('.pill-count'); if (!el) return;
-    const p  = pill.dataset.product;
-    el.textContent = p==='All' ? items.length : items.filter(i=>i._products.includes(p)).length;
+function buildProductPills(dataItems) {
+  // Count items per PRODUCT_RULES group
+  const productCounts = {};
+  const extraServiceCounts = {};
+  dataItems.forEach(item => {
+    const matched = new Set();
+    (item.Services || []).forEach(svc => {
+      let found = false;
+      for (const [product, matcher] of Object.entries(PRODUCT_RULES)) {
+        if (matcher(svc)) { matched.add(product); found = true; break; }
+      }
+      if (!found) extraServiceCounts[svc] = (extraServiceCounts[svc] || 0) + 1;
+    });
+    matched.forEach(p => productCounts[p] = (productCounts[p] || 0) + 1);
+  });
+
+  // Build pill data: known products first, then extra services
+  const pills = [
+    ...Object.entries(productCounts).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
+    ...Object.entries(extraServiceCounts).filter(([,c])=>c>0).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
+  ];
+
+  const row = document.getElementById('productFilterRow');
+  // Keep the label span, replace everything else
+  row.innerHTML = '<span class="filter-label">Product:</span>';
+
+  // All button
+  const allBtn = document.createElement('button');
+  allBtn.className = 'pill' + (selectedProducts.length === 0 ? ' active' : '');
+  allBtn.innerHTML = `All<span class="pill-count">${dataItems.length}</span>`;
+  allBtn.onclick = () => { selectedProducts = []; saveProductPrefs(); buildProductPills(dataItems); renderAll(); };
+  row.appendChild(allBtn);
+
+  pills.forEach(({ key, label, count }) => {
+    const btn = document.createElement('button');
+    const active = selectedProducts.includes(key);
+    btn.className = 'pill' + (active ? ' active' : '');
+    btn.innerHTML = `${esc(label)}<span class="pill-count">${count}</span>`;
+    btn.onclick = () => {
+      const idx = selectedProducts.indexOf(key);
+      if (idx >= 0) selectedProducts.splice(idx, 1);
+      else selectedProducts.push(key);
+      saveProductPrefs();
+      buildProductPills(dataItems);
+      renderAll();
+    };
+    row.appendChild(btn);
   });
 }
-function setProduct(p) {
-  activeProduct = p;
-  document.querySelectorAll('.pill[data-product]').forEach(el=>el.classList.toggle('active', el.dataset.product===p));
-  renderAll();
+
+function saveProductPrefs() {
+  try { localStorage.setItem('m365_products', JSON.stringify(selectedProducts)); } catch {}
+}
+
+function loadProductPrefs() {
+  try { return JSON.parse(localStorage.getItem('m365_products') || '[]'); } catch { return []; }
 }
 function updateStatusBar(count) {
   document.getElementById('statusBar').style.display = 'flex';
   const rl = document.getElementById('rangeSelect').selectedOptions[0].text;
   document.getElementById('statusText').innerHTML =
     `Showing <strong>${count}</strong> roadmap item${count!==1?'s':''}` +
-    (activeProduct!=='All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    (selectedProducts.length > 0 ? ` · ${selectedProducts.length} product filter${selectedProducts.length!==1?'s':''}` : '') +
     ` · GA within ${rl}`;
 }
 function setContent(h) { document.getElementById('content').innerHTML = h; }
@@ -650,8 +700,11 @@ loadData();
 
 // ── Tooltip ───────────────────────────────────────────────────────
 const STATUS_EXCL = new Set(['In development','Preview','Rolling out','Launched','Cancelled','General Availability','Worldwide','GCC','GCC High','DoD']);
+let _tipHideTimer = null;
 
 function tipShow(id, ev) {
+  clearTimeout(_tipHideTimer);
+  _tipHideTimer = null;
   const item = window._tlItemMap && window._tlItemMap[id];
   if (!item) return;
   const tip = document.getElementById('tl-tooltip');
@@ -663,44 +716,48 @@ function tipShow(id, ev) {
   const svcs  = (item.Services || []).join(', ');
   const summary = item.Summary || '';
   const extraTags = (item.Tags || []).filter(t => !STATUS_EXCL.has(t));
+  const url = item.Url || `https://www.microsoft.com/microsoft-365/roadmap?id=${(item.Id||'').replace('RM','')}`;
 
   let html = `<span class="tl-tip-badge ${sc}">${badge}</span>`;
   html += `<div class="tl-tip-title">${esc(item.Title || '')}</div>`;
   if (summary) html += `<div class="tl-tip-summary">${esc(summary)}</div>`;
   html += `<div class="tl-tip-meta">`;
   if (prods)  html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Products:</span><span>${esc(prods)}</span></div>`;
-  if (svcs)   html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Services:</span><span>${esc(svcs)}</span></div>`;
+  if (svcs && svcs !== prods) html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Services:</span><span>${esc(svcs)}</span></div>`;
   if (date)   html += `<div class="tl-tip-row"><span class="tl-tip-lbl">GA date:</span><span>${esc(date)}</span></div>`;
   if (mod)    html += `<div class="tl-tip-row"><span class="tl-tip-lbl">Updated:</span><span>${esc(mod)}</span></div>`;
   html += `</div>`;
   if (extraTags.length) {
     html += `<div class="tl-tip-tags">` + extraTags.map(t => `<span class="tl-tip-tag">${esc(t)}</span>`).join('') + `</div>`;
   }
+  html += `<div style="margin-top:10px"><a href="${esc(url)}" target="_blank" style="font-size:11px;color:#00864F;text-decoration:none">View on Microsoft Roadmap ↗</a></div>`;
 
   tip.innerHTML = html;
-  tip.style.display = 'block';
-  tipPos(ev);
-}
 
-function tipHide() {
-  document.getElementById('tl-tooltip').style.display = 'none';
-}
-
-function tipPos(ev) {
-  const tip = document.getElementById('tl-tooltip');
-  if (!tip || tip.style.display === 'none') return;
-  const tw = tip.offsetWidth  || 340;
-  const th = tip.offsetHeight || 200;
-  let x = ev.clientX + 18, y = ev.clientY + 18;
-  if (x + tw > window.innerWidth  - 10) x = ev.clientX - tw - 10;
-  if (y + th > window.innerHeight - 10) y = ev.clientY - th - 10;
+  // Position once when shown — does not follow mouse
+  const tw = 340, th = 260;
+  let x = ev.clientX + 18;
+  let y = ev.clientY - 40;
+  if (x + tw > window.innerWidth  - 12) x = ev.clientX - tw - 12;
+  if (y + th > window.innerHeight - 12) y = window.innerHeight - th - 12;
+  if (y < 12) y = 12;
   tip.style.left = x + 'px';
   tip.style.top  = y + 'px';
+  tip.style.display = 'block';
 }
 
-document.addEventListener('mousemove', tipPos);
+function tipStartHide() {
+  _tipHideTimer = setTimeout(() => {
+    document.getElementById('tl-tooltip').style.display = 'none';
+  }, 160);
+}
+
+function tipCancelHide() {
+  clearTimeout(_tipHideTimer);
+  _tipHideTimer = null;
+}
 </script>
 
-<div id="tl-tooltip" class="tl-tip"></div>
+<div id="tl-tooltip" class="tl-tip" onmouseenter="tipCancelHide()" onmouseleave="tipStartHide()"></div>
 </body>
 </html>

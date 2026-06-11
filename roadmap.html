@@ -412,6 +412,56 @@
   .email-feedback { font-size: 12px; margin-left: 4px; }
   .email-feedback.ok { color: #107C10; }
   .email-feedback.err { color: #c50f1f; }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 380px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--ms-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+  }
+  .detail-panel.visible { display: flex; animation: dpSlideIn 0.15s ease; }
+  @keyframes dpSlideIn {
+    from { opacity: 0; transform: translateY(-50%) translateX(14px); }
+    to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+  }
+  .dp-header {
+    background: var(--ms-purple);
+    color: white;
+    padding: 14px 16px;
+    border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+  }
+  .dp-title { font-size: 14px; font-weight: 600; line-height: 1.35; margin-bottom: 8px; }
+  .dp-title a { color: white; text-decoration: none; }
+  .dp-title a:hover { text-decoration: underline; }
+  .dp-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dp-body { padding: 14px 16px; font-size: 13px; color: var(--ms-text); }
+  .dp-section { margin-bottom: 12px; }
+  .dp-label { font-size: 11px; font-weight: 600; color: var(--ms-text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .dp-summary { line-height: 1.6; color: var(--ms-text); }
+  .dp-summary img { max-width: 100%; border-radius: 4px; margin: 6px 0; display: block; }
+  .dp-summary a { color: var(--ms-purple); }
+  .dp-meta-row { display: flex; gap: 8px; font-size: 12px; margin-bottom: 4px; color: var(--ms-text-muted); }
+  .dp-meta-lbl { font-weight: 600; color: var(--ms-text); white-space: nowrap; }
+  .dp-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .dp-tag { background: var(--ms-grey-light); border: 1px solid var(--ms-border); padding: 2px 8px; border-radius: 4px; font-size: 11px; color: var(--ms-text-muted); }
+  .dp-footer { padding: 10px 16px; border-top: 1px solid var(--ms-border); display: flex; gap: 12px; flex-shrink: 0; align-items: center; }
+  .dp-link { color: var(--ms-purple); font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+  .dp-link:hover { text-decoration: underline; }
+  .dp-progress { margin-bottom: 12px; }
+  .dp-close { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--ms-text-muted); font-size: 18px; line-height: 1; padding: 0 2px; }
+  .dp-close:hover { color: var(--ms-text); }
 </style>
 </head>
 <body>
@@ -452,16 +502,8 @@
         <option value="0">All time</option>
       </select>
     </div>
-    <div class="filter-row">
+    <div class="filter-row" id="productFilterRow" style="flex-wrap:wrap">
       <span class="filter-label">Product:</span>
-      <button class="pill active" data-product="All" onclick="setProduct('All')">All<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot" onclick="setProduct('Copilot')">Copilot<span class="pill-count"></span></button>
-      <button class="pill" data-product="Copilot Studio" onclick="setProduct('Copilot Studio')">Copilot Studio<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Platform" onclick="setProduct('Power Platform')">Power Platform<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Apps" onclick="setProduct('Power Apps')">Power Apps<span class="pill-count"></span></button>
-      <button class="pill" data-product="Power Automate" onclick="setProduct('Power Automate')">Power Automate<span class="pill-count"></span></button>
-      <button class="pill" data-product="Dynamics 365 Sales" onclick="setProduct('Dynamics 365 Sales')">D365 Sales<span class="pill-count"></span></button>
-      <button class="pill" data-product="Business Central" onclick="setProduct('Business Central')">Business Central<span class="pill-count"></span></button>
     </div>
     <div class="filter-row">
       <span class="filter-label">Status:</span>
@@ -499,6 +541,8 @@
 <div class="footer">
   Data sourced from <a href="https://www.microsoft.com/microsoft-365/roadmap" target="_blank" style="color:var(--ms-purple)">Microsoft 365 Roadmap</a>
 </div>
+
+<div id="detailPanel" class="detail-panel" onmouseenter="dpCancelHide()" onmouseleave="dpStartHide()"></div>
 
 <script>
 const DATA_URL = 'https://mc.merill.net/messages-index.json';
@@ -555,7 +599,7 @@ const STATUS_PROGRESS = {
 };
 
 let allItems = [];
-let activeProduct = 'All';
+let selectedProducts = loadProductPrefs();
 let activeStatus = 'All';
 let lastFetchTime = null;
 let currentViewItems = [];
@@ -580,6 +624,7 @@ async function loadData(forceRefresh = false) {
     const raw = Array.isArray(data) ? data : (data.items || data.messages || []);
     allItems = raw.map(i => ({ ...i, _gaDate: extractGADate(i.Summary || '') }));
     lastFetchTime = new Date();
+    buildProductPills(allItems.filter(i => i.Id && i.Id.startsWith('RM')));
     renderAll();
   } catch (err) {
     showError(`Failed to load data: ${err.message}.`);
@@ -627,12 +672,14 @@ function renderAll() {
     );
   }
 
-  // Update pill counts (after date + status + search, before product filter)
-  updatePillCounts(items);
-
-  // Product filter
-  if (activeProduct !== 'All') {
-    items = items.filter(item => item._products.includes(activeProduct));
+  // Product filter (multi-select)
+  if (selectedProducts.length > 0) {
+    items = items.filter(item =>
+      selectedProducts.some(sel =>
+        PRODUCT_RULES[sel] ? (item._products || []).includes(sel)
+                           : (item.Services  || []).includes(sel)
+      )
+    );
   }
 
   // Sort: In development / Rolling out first, then by date desc
@@ -661,14 +708,23 @@ function renderAll() {
     return;
   }
 
-  if (activeProduct === 'All') {
+  if (selectedProducts.length === 0) {
     const sections = Object.keys(PRODUCT_RULES).map(product => ({
       product,
-      items: items.filter(i => i._products.includes(product)),
+      items: items.filter(i => (i._products||[]).includes(product)),
     })).filter(s => s.items.length > 0);
     setContent(sections.map(s => renderSection(s.product, s.items, query)).join(''));
   } else {
-    setContent(renderSection(activeProduct, items, query));
+    const knownSelected = selectedProducts.filter(p => PRODUCT_RULES[p]);
+    if (knownSelected.length > 0) {
+      const sections = knownSelected.map(product => ({
+        product,
+        items: items.filter(i => (i._products||[]).includes(product)),
+      })).filter(s => s.items.length > 0);
+      setContent(sections.map(s => renderSection(s.product, s.items, query)).join('') || `<div class="state-msg"><h3>No items for selection</h3></div>`);
+    } else {
+      setContent(renderSection(selectedProducts[0] || 'Results', items, query));
+    }
   }
 
   updateHeaderSub(items.length);
@@ -688,15 +744,56 @@ function getProducts(item) {
     .map(([p]) => p);
 }
 
-function updatePillCounts(items) {
-  document.querySelectorAll('.pill[data-product]').forEach(pill => {
-    const product = pill.dataset.product;
-    const countEl = pill.querySelector('.pill-count');
-    if (!countEl) return;
-    countEl.textContent = product === 'All'
-      ? items.length
-      : items.filter(i => i._products.includes(product)).length;
+function buildProductPills(dataItems) {
+  const productCounts = {};
+  const extraServiceCounts = {};
+  dataItems.forEach(item => {
+    const matched = new Set();
+    (item.Services || []).forEach(svc => {
+      let found = false;
+      for (const [product, matcher] of Object.entries(PRODUCT_RULES)) {
+        if (matcher(svc)) { matched.add(product); found = true; break; }
+      }
+      if (!found && svc) extraServiceCounts[svc] = (extraServiceCounts[svc] || 0) + 1;
+    });
+    matched.forEach(p => productCounts[p] = (productCounts[p] || 0) + 1);
   });
+
+  const pills = [
+    ...Object.entries(productCounts).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
+    ...Object.entries(extraServiceCounts).filter(([,c])=>c>1).sort((a,b)=>b[1]-a[1]).map(([k,c])=>({ key:k, label:k, count:c })),
+  ];
+
+  const row = document.getElementById('productFilterRow');
+  row.innerHTML = '<span class="filter-label">Product:</span>';
+
+  const allBtn = document.createElement('button');
+  allBtn.className = 'pill' + (selectedProducts.length === 0 ? ' active' : '');
+  allBtn.innerHTML = `All<span class="pill-count">${dataItems.length}</span>`;
+  allBtn.onclick = () => { selectedProducts = []; saveProductPrefs(); buildProductPills(dataItems); renderAll(); };
+  row.appendChild(allBtn);
+
+  pills.forEach(({ key, label, count }) => {
+    const btn = document.createElement('button');
+    btn.className = 'pill' + (selectedProducts.includes(key) ? ' active' : '');
+    btn.innerHTML = `${esc(label)}<span class="pill-count">${count}</span>`;
+    btn.onclick = () => {
+      const idx = selectedProducts.indexOf(key);
+      if (idx >= 0) selectedProducts.splice(idx, 1); else selectedProducts.push(key);
+      saveProductPrefs();
+      buildProductPills(dataItems);
+      renderAll();
+    };
+    row.appendChild(btn);
+  });
+}
+
+function saveProductPrefs() {
+  try { localStorage.setItem('m365_products', JSON.stringify(selectedProducts)); } catch {}
+}
+
+function loadProductPrefs() {
+  try { return JSON.parse(localStorage.getItem('m365_products') || '[]'); } catch { return []; }
 }
 
 function renderSection(product, items, query) {
@@ -751,7 +848,7 @@ function renderCard(item, query) {
   const metaDate = modDate ? `Updated ${formatDate(modDate)}` : (startDate ? formatDate(startDate) : '');
 
   return `
-    <div class="card">
+    <div class="card" onmouseenter="dpCardEnter('${esc(id)}')" onmouseleave="dpStartHide()">
       <div class="card-header">
         <a class="card-title" href="${esc(url)}" target="_blank">${title}</a>
         <div class="badges">${majorBadge}${statusBadge}</div>
@@ -781,13 +878,6 @@ function renderCard(item, query) {
     </div>`;
 }
 
-function setProduct(p) {
-  activeProduct = p;
-  document.querySelectorAll('.pill[data-product]').forEach(el => {
-    el.classList.toggle('active', el.dataset.product === p);
-  });
-  renderAll();
-}
 
 function setStatus(s) {
   activeStatus = s;
@@ -814,7 +904,7 @@ function updateStatusBar(items) {
   const summary = Object.entries(counts).map(([s,n]) => `${n} ${s.toLowerCase()}`).join(' · ');
   document.getElementById('statusText').innerHTML =
     `<strong>${items.length}</strong> item${items.length !== 1 ? 's' : ''}` +
-    (activeProduct !== 'All' ? ` for <strong>${activeProduct}</strong>` : '') +
+    (selectedProducts.length > 0 ? ` · ${selectedProducts.length} product${selectedProducts.length!==1?'s':''} selected` : '') +
     ` · ${rangeLabel}` +
     (summary ? ` <span style="color:#8a8886;font-size:11px">(${summary})</span>` : '');
   if (lastFetchTime) {
